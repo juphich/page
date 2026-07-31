@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>간트차트</title>
+
+<!-- ============ 편집 대상 데이터 (자기 편집 문서의 핵심) ============ -->
+<script id="gantt-data" type="application/json">
+{
+  "title": "샘플 프로젝트 일정",
+  "tasks": [
+    { "id": "t1", "name": "요구사항 분석",   "start": "2026-07-06", "end": "2026-07-10", "progress": 100, "color": "#4f7cff" },
+    { "id": "t2", "name": "UI 설계",         "start": "2026-07-09", "end": "2026-07-15", "progress": 80,  "color": "#00a3a3" },
+    { "id": "t3", "name": "백엔드 API 구현",  "start": "2026-07-13", "end": "2026-07-24", "progress": 45,  "color": "#e8863c" },
+    { "id": "t4", "name": "프론트엔드 구현",  "start": "2026-07-16", "end": "2026-07-28", "progress": 30,  "color": "#c65fb0" },
+    { "id": "t5", "name": "통합 테스트",      "start": "2026-07-27", "end": "2026-07-31", "progress": 0,   "color": "#8a63d2" },
+    { "id": "t6", "name": "배포",            "start": "2026-08-03", "end": "2026-08-04", "progress": 0,   "color": "#d64545" }
+  ]
+}
+</script>
+
+<style>
+  :root {
+    --dayw: 30px;   /* 하루 폭 */
+    --rowh: 38px;   /* 태스크 행 높이 */
+    --headh: 46px;  /* 타임라인 헤더 높이(월+일 2줄) */
+    --sidew: 200px; /* 좌측 태스크명 폭 */
+    --bg: #ffffff;
+    --fg: #1c2333;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --weekend: #f7f8fa;
+    --today: #ff4d4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f0f2f5; color: var(--fg);
+    font: 14px/1.5 -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+
+  /* ---- 툴바 (인쇄/저장 결과물에는 안 나옴) ---- */
+  .toolbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .toolbar .spacer { flex: 1; }
+  button {
+    font: inherit; padding: 7px 13px; border-radius: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff; color: var(--fg);
+  }
+  button:hover { background: #f4f6f9; }
+  button.primary { background: var(--fg); color: #fff; border-color: var(--fg); }
+  button.primary:hover { opacity: .9; }
+  .badge {
+    font-size: 12px; color: var(--muted); padding: 3px 8px;
+    border: 1px solid var(--line); border-radius: 20px;
+  }
+
+  /* ---- 카드 ---- */
+  .card { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  h1.title {
+    margin: 0; padding: 18px 20px 14px; font-size: 20px; font-weight: 700;
+    outline: none;
+  }
+  h1.title:focus { background: #f4f6f9; }
+
+  /* ---- 간트 본체 ---- */
+  .gantt { display: flex; border-top: 1px solid var(--line); }
+  .sidebar { flex: 0 0 var(--sidew); border-right: 1px solid var(--line); background: #fff; z-index: 2; }
+  .sidebar .sb-head { height: var(--headh); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; padding: 0 14px; font-weight: 600; color: var(--muted); font-size: 13px; }
+  .sidebar .sb-row { height: var(--rowh); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; padding: 0 14px; gap: 8px; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis; }
+  .sidebar .sb-row .dot { flex: 0 0 9px; height: 9px; border-radius: 50%; }
+  .sidebar .sb-row .nm { overflow: hidden; text-overflow: ellipsis; }
+
+  .timeline { overflow-x: auto; position: relative; flex: 1; }
+  .tl-inner { position: relative; }
+  .tl-head { position: sticky; top: 0; height: var(--headh); z-index: 1; background: #fff;
+    border-bottom: 1px solid var(--line); }
+  .tl-month { position: absolute; top: 0; height: 23px; border-right: 1px solid var(--line);
+    font-size: 12px; font-weight: 600; color: var(--fg); padding: 3px 6px; white-space: nowrap; overflow: hidden; }
+  .tl-day { position: absolute; top: 23px; height: 23px; width: var(--dayw); border-right: 1px solid var(--line);
+    font-size: 10px; color: var(--muted); text-align: center; line-height: 23px; }
+  .tl-day.we { color: #b0455a; }
+  .tl-body { position: relative; }
+  .col-we { position: absolute; top: 0; bottom: 0; width: var(--dayw); background: var(--weekend); }
+  .rowline { position: absolute; left: 0; right: 0; height: var(--rowh); border-bottom: 1px solid var(--line); }
+  .today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--today); z-index: 3; opacity: .7; }
+  .today-line::after { content: "오늘"; position: absolute; top: -18px; left: -12px; font-size: 10px; color: var(--today); }
+
+  .bar { position: absolute; height: 22px; border-radius: 6px; overflow: hidden; z-index: 2;
+    box-shadow: 0 1px 2px rgba(0,0,0,.15); display: flex; align-items: center; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(0,0,0,.22); }
+  .bar .lbl { position: relative; padding: 0 7px; font-size: 11px; color: #fff; white-space: nowrap;
+    text-shadow: 0 1px 1px rgba(0,0,0,.3); pointer-events: none; }
+  .bar .handle { position: absolute; top: 0; bottom: 0; width: 7px; cursor: ew-resize; display: none; }
+  .bar .handle.l { left: 0; } .bar .handle.r { right: 0; }
+
+  /* 편집모드 표시 */
+  body.edit .bar { cursor: grab; }
+  body.edit .bar .handle { display: block; }
+  body.edit .sidebar .sb-row { background: #fbfcff; }
+
+  /* ---- 편집 표 ---- */
+  .editor { display: none; margin-top: 16px; }
+  body.edit .editor { display: block; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; font-size: 13px; }
+  th { background: #f7f8fa; font-weight: 600; color: var(--muted); }
+  td input[type=text], td input[type=date], td input[type=number] {
+    width: 100%; border: 1px solid transparent; background: transparent; font: inherit; padding: 3px 4px; border-radius: 4px; }
+  td input:focus { border-color: #c7d2fe; background: #fff; outline: none; }
+  td input[type=color] { width: 30px; height: 24px; border: none; background: none; padding: 0; cursor: pointer; }
+  td.del button { color: #d64545; border-color: #f0caca; padding: 4px 9px; }
+
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    background: #1c2333; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+
+  /* =================== 인쇄(PDF) =================== */
+  @page { size: landscape; margin: 12mm; }
+  @media print {
+    body { background: #fff; }
+    .wrap { margin: 0; max-width: none; padding: 0; }
+    .toolbar, .editor, .bar .handle { display: none !important; }
+    .card { border: none; }
+    .timeline { overflow: visible; }        /* 잘림 방지 — 전체 폭 인쇄 */
+    .tl-head { position: static; }
+    .bar { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .col-we, .fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .rowline, .bar { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <button id="btn-edit" class="primary">✏️ 편집모드</button>
+    <button id="btn-add" style="display:none">＋ 태스크 추가</button>
+    <span class="spacer"></span>
+    <span id="mode-badge" class="badge">보기 모드</span>
+    <button id="btn-save">💾 HTML로 저장</button>
+    <button id="btn-pdf">🖨 PDF 출력</button>
+  </div>
+
+  <div class="card">
+    <h1 class="title" id="title" contenteditable="false"></h1>
+    <div class="gantt">
+      <div class="sidebar" id="sidebar"></div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+
+  <div class="editor">
+    <table>
+      <thead><tr><th style="width:26%">태스크명</th><th>시작</th><th>종료</th><th style="width:90px">진행률%</th><th style="width:60px">색상</th><th style="width:60px">삭제</th></tr></thead>
+      <tbody id="editrows"></tbody>
+    </table>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- 상태 로드 ----------
+  const state = JSON.parse(document.getElementById('gantt-data').textContent);
+  let editMode = false;
+  const DAY = 86400000;
+  const px = n => n + 'px';
+
+  // ---------- 날짜 유틸 (UTC 기준, 타임존 영향 제거) ----------
+  const parse = s => { const [y,m,d] = s.split('-').map(Number); return Date.UTC(y, m-1, d); };
+  const fmt = t => { const d = new Date(t);
+    return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0'); };
+  const diff = (a,b) => Math.round((b - a) / DAY);
+  const todayUTC = () => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); };
+
+  function dims() {
+    const cs = getComputedStyle(document.documentElement);
+    return { DAYW: parseInt(cs.getPropertyValue('--dayw')),
+             ROWH: parseInt(cs.getPropertyValue('--rowh')),
+             HEADH: parseInt(cs.getPropertyValue('--headh')) };
+  }
+
+  function range() {
+    let min = Infinity, max = -Infinity;
+    state.tasks.forEach(t => { min = Math.min(min, parse(t.start)); max = Math.max(max, parse(t.end)); });
+    if (!isFinite(min)) { min = todayUTC(); max = min + 20*DAY; }
+    return { min: min - 3*DAY, max: max + 3*DAY };
+  }
+
+  // ---------- 렌더링 ----------
+  function render() {
+    document.getElementById('title').textContent = state.title || '제목 없음';
+    renderChart();
+    renderTable();
+  }
+
+  function renderChart() {
+    const { DAYW, ROWH, HEADH } = dims();
+    const { min, max } = range();
+    const totalDays = diff(min, max) + 1;
+    const width = totalDays * DAYW;
+
+    // ----- 좌측 사이드바 -----
+    const sb = document.getElementById('sidebar');
+    let sh = '<div class="sb-head">태스크</div>';
+    state.tasks.forEach(t => {
+      sh += '<div class="sb-row"><span class="dot" style="background:'+t.color+'"></span>'
+          + '<span class="nm">'+esc(t.name)+'</span></div>';
+    });
+    sb.innerHTML = sh;
+
+    // ----- 타임라인 -----
+    const tl = document.getElementById('timeline');
+    let head = '', body = '';
+    // 월 헤더
+    let d = min, monthStart = min;
+    while (d <= max) {
+      const nd = d + DAY;
+      const dt = new Date(d), ndt = new Date(nd);
+      const isWe = dt.getUTCDay() === 0 || dt.getUTCDay() === 6;
+      const x = diff(min, d) * DAYW;
+      head += '<div class="tl-day'+(isWe?' we':'')+'" style="left:'+px(x)+'">'+dt.getUTCDate()+'</div>';
+      if (isWe) body += '<div class="col-we" style="left:'+px(x)+'"></div>';
+      // 월 경계
+      if (ndt.getUTCMonth() !== dt.getUTCMonth() || nd > max) {
+        const mx = diff(min, monthStart) * DAYW;
+        const mw = (diff(monthStart, d) + 1) * DAYW;
+        head = '<div class="tl-month" style="left:'+px(mx)+';width:'+px(mw)+'">'
+             + dt.getUTCFullYear() + '.' + String(dt.getUTCMonth()+1).padStart(2,'0') + '</div>' + head;
+        monthStart = nd;
+      }
+      d = nd;
+    }
+    // 행 라인
+    state.tasks.forEach((t, i) => { body += '<div class="rowline" style="top:'+px(i*ROWH)+'"></div>'; });
+    // 오늘 라인
+    const today = todayUTC();
+    if (today >= min && today <= max) {
+      const tx = diff(min, today) * DAYW + DAYW/2;
+      body += '<div class="today-line" style="left:'+px(tx)+'"></div>';
+    }
+    // 막대
+    state.tasks.forEach((t, i) => {
+      const s = parse(t.start), e = parse(t.end);
+      const left = diff(min, s) * DAYW;
+      const w = (diff(s, e) + 1) * DAYW;
+      const top = i*ROWH + (ROWH-22)/2;
+      body += '<div class="bar" data-id="'+t.id+'" style="left:'+px(left)+';width:'+px(w)+';top:'+px(top)+';background:'+t.color+'">'
+            + '<div class="fill" style="width:'+(t.progress||0)+'%"></div>'
+            + '<div class="handle l"></div><div class="lbl">'+esc(t.name)+' · '+(t.progress||0)+'%</div><div class="handle r"></div>'
+            + '</div>';
+    });
+
+    tl.innerHTML = '<div class="tl-inner" style="width:'+px(width)+'">'
+                 + '<div class="tl-head">'+head+'</div>'
+                 + '<div class="tl-body" style="height:'+px(state.tasks.length*ROWH)+'">'+body+'</div></div>';
+
+    attachDrag();
+  }
+
+  function renderTable() {
+    const tb = document.getElementById('editrows');
+    let h = '';
+    state.tasks.forEach(t => {
+      h += '<tr data-id="'+t.id+'">'
+         + '<td><input type="text" data-f="name" value="'+esc(t.name)+'"></td>'
+         + '<td><input type="date" data-f="start" value="'+t.start+'"></td>'
+         + '<td><input type="date" data-f="end" value="'+t.end+'"></td>'
+         + '<td><input type="number" data-f="progress" min="0" max="100" value="'+(t.progress||0)+'"></td>'
+         + '<td><input type="color" data-f="color" value="'+t.color+'"></td>'
+         + '<td class="del"><button data-del="'+t.id+'">삭제</button></td></tr>';
+    });
+    tb.innerHTML = h;
+  }
+
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const find = id => state.tasks.find(t => t.id === id);
+
+  // ---------- 드래그 / 리사이즈 ----------
+  function attachDrag() {
+    document.querySelectorAll('.bar').forEach(bar => {
+      bar.addEventListener('mousedown', e => {
+        if (!editMode) return;
+        const id = bar.dataset.id, task = find(id);
+        const { DAYW } = dims();
+        const mode = e.target.classList.contains('l') ? 'l' : e.target.classList.contains('r') ? 'r' : 'move';
+        const x0 = e.clientX, s0 = parse(task.start), e0 = parse(task.end);
+        e.preventDefault();
+        document.body.style.cursor = mode === 'move' ? 'grabbing' : 'ew-resize';
+
+        function mm(ev) {
+          const dd = Math.round((ev.clientX - x0) / DAYW);
+          let s = s0, en = e0;
+          if (mode === 'move') { s = s0 + dd*DAY; en = e0 + dd*DAY; }
+          else if (mode === 'l') { s = Math.min(s0 + dd*DAY, e0); }
+          else { en = Math.max(e0 + dd*DAY, s0); }
+          task.start = fmt(s); task.end = fmt(en);
+          renderChart();               // 막대/그리드 갱신
+          syncRow(id);                 // 편집 표 날짜만 갱신(포커스 유지)
+        }
+        function mu() {
+          document.removeEventListener('mousemove', mm);
+          document.removeEventListener('mouseup', mu);
+          document.body.style.cursor = '';
+        }
+        document.addEventListener('mousemove', mm);
+        document.addEventListener('mouseup', mu);
+      });
+    });
+  }
+
+  function syncRow(id) {
+    const t = find(id);
+    const row = document.querySelector('#editrows tr[data-id="'+id+'"]');
+    if (!row) return;
+    row.querySelector('[data-f=start]').value = t.start;
+    row.querySelector('[data-f=end]').value = t.end;
+  }
+
+  // ---------- 편집 표 입력 처리 ----------
+  document.getElementById('editrows').addEventListener('input', e => {
+    const inp = e.target, row = inp.closest('tr'); if (!row) return;
+    const t = find(row.dataset.id), f = inp.dataset.f; if (!t || !f) return;
+    if (f === 'progress') t.progress = Math.max(0, Math.min(100, +inp.value || 0));
+    else t[f] = inp.value;
+    if (f === 'name') {                // 이름은 막대 라벨/사이드바만 갱신(포커스 유지)
+      renderChart();
+    } else if (f === 'start' || f === 'end' || f === 'color') {
+      renderChart();
+    }
+  });
+  document.getElementById('editrows').addEventListener('click', e => {
+    const id = e.target.dataset.del; if (!id) return;
+    state.tasks = state.tasks.filter(t => t.id !== id);
+    render();
+  });
+
+  // ---------- 태스크 추가 ----------
+  document.getElementById('btn-add').addEventListener('click', () => {
+    const base = state.tasks.length ? parse(state.tasks[state.tasks.length-1].end) : todayUTC();
+    const palette = ['#4f7cff','#00a3a3','#e8863c','#c65fb0','#8a63d2','#d64545','#2fa84f'];
+    state.tasks.push({ id: 't'+Date.now().toString(36), name: '새 태스크',
+      start: fmt(base + DAY), end: fmt(base + 4*DAY), progress: 0,
+      color: palette[state.tasks.length % palette.length] });
+    render();
+  });
+
+  // ---------- 제목 편집 ----------
+  const titleEl = document.getElementById('title');
+  titleEl.addEventListener('blur', () => { state.title = titleEl.textContent.trim() || '제목 없음'; });
+
+  // ---------- 편집모드 토글 ----------
+  function setEdit(on) {
+    editMode = on;
+    document.body.classList.toggle('edit', on);
+    document.getElementById('btn-add').style.display = on ? '' : 'none';
+    document.getElementById('mode-badge').textContent = on ? '편집 모드' : '보기 모드';
+    document.getElementById('btn-edit').textContent = on ? '✅ 편집 완료' : '✏️ 편집모드';
+    titleEl.contentEditable = on ? 'true' : 'false';
+  }
+  document.getElementById('btn-edit').addEventListener('click', () => setEdit(!editMode));
+
+  // ---------- PDF ----------
+  document.getElementById('btn-pdf').addEventListener('click', () => { if (editMode) setEdit(false); setTimeout(() => window.print(), 60); });
+
+  // ---------- HTML 저장 (자기 자신을 재조립) ----------
+  document.getElementById('btn-save').addEventListener('click', save);
+  async function save() {
+    const wasEdit = editMode;
+    setEdit(false);
+    // 1) 최신 상태를 데이터 스크립트에 반영
+    document.getElementById('gantt-data').textContent = JSON.stringify(state, null, 2);
+    // 2) 렌더 결과물은 비워서 저장 → 열릴 때 스크립트가 새로 그림 (전이 상태 미포함)
+    const sb = document.getElementById('sidebar'), tl = document.getElementById('timeline'), tr = document.getElementById('editrows');
+    const bak = [sb.innerHTML, tl.innerHTML, tr.innerHTML];
+    sb.innerHTML = tl.innerHTML = tr.innerHTML = '';
+    const html = '<!doctype html>\n' + document.documentElement.outerHTML;
+    sb.innerHTML = bak[0]; tl.innerHTML = bak[1]; tr.innerHTML = bak[2];
+    attachDrag();
+    if (wasEdit) setEdit(true);
+
+    const name = (state.title || 'gantt').replace(/[\\/:*?"<>|]/g, '_') + '.html';
+    if (window.showSaveFilePicker) {
+      try {
+        const h = await window.showSaveFilePicker({ suggestedName: name,
+          types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }] });
+        const w = await h.createWritable(); await w.write(html); await w.close();
+        return toast('파일에 저장했습니다');
+      } catch (err) { if (err.name === 'AbortError') return; /* 미지원/거부 → 폴백 */ }
+    }
+    const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+    toast('다운로드했습니다');
+  }
+
+  let toastT;
+  function toast(msg) {
+    const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
