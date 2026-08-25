@@ -49,14 +49,22 @@ open src/gantt.html          # macOS. 그 외에는 브라우저로 파일을 �
 
 ```
 page-canvas/
+├── Cargo.toml             # Cargo workspace
 ├── README.md
+├── crates/
+│   └── page/
+│       ├── core/          # page-core: 파싱·중간 모델·HTML 생성
+│       │   ├── src/
+│       │   └── runtime/   # 바이너리에 포함할 PAGE HTML 런타임
+│       └── cli/           # page-cli: `page` 명령행 프로그램
 ├── docs/
 │   ├── requirements.md
 │   └── design.md
-└── src/
-    └── gantt.html        # 단일 파일 프로토타입 (배포 산출물이자 편집기)
+└── backups/
+    └── prototype-src/
+        └── gantt.html     # 최초 단일 파일 프로토타입 백업
 ```
 
 ## 현재 상태
 
-동작하는 브라우저 편집기 프로토타입 단계. Rust 기반 Markdown 문서 생성기와 page:* 블록 파서는 설계 단계이다. 간트 막대 렌더링·드래그/리사이즈 편집·표 편집·자기 재저장·PDF 인쇄까지 동작한다. 의존관계 화살표, 마일스톤, 긴 일정의 PDF 페이지 분할, undo는 미구현 — [docs/design.md](docs/design.md)의 로드맵 참고.
+Rust 생성기를 위한 Cargo workspace와 `page-core`, `page-cli` 기본 구조를 구성한 단계다. 최초 브라우저 편집기 프로토타입은 `backups/prototype-src/gantt.html`에 보존되어 있다. Markdown 파서와 HTML 생성 파이프라인은 아직 구현 전이다. 기존 프로토타입에서는 간트 막대 렌더링·드래그/리사이즈 편집·표 편집·자기 재저장·PDF 인쇄까지 동작한다. 의존관계 화살표, 마일스톤, 긴 일정의 PDF 페이지 분할, undo는 미구현 — [docs/design.md](docs/design.md)의 로드맵 참고.

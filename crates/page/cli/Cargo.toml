@@ -1,0 +1,13 @@
+[package]
+name = "page-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "page"
+path = "src/main.rs"
+
+[dependencies]
+page-core = { path = "../core" }
