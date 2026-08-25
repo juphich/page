@@ -18,11 +18,12 @@ Apply the project rules in [../../rules/project.md](../../rules/project.md) befo
 ## Epic Workflow
 
 1. Identify the epic and task that contain the requested work.
-2. Inspect the epic's `index.md`, `plan.md`, and relevant task document before changing project files.
-3. If the work has no documents, create the epic and task documents first using [references/templates.md](references/templates.md).
-4. Keep the task checklist in `plan.md` synchronized with actual progress.
-5. Record material decisions, changed files, and verification results in the task document.
-6. Mark a task complete only after its stated completion conditions and checks pass.
-7. When the epic ends, update its final status and move the entire epic directory from `docs/epics/` to `docs/archive/` without renaming or restructuring it.
+2. Assign every task a `pt-xxxx` code using four zero-padded digits.
+3. Inspect the epic's `index.md`, `plan.md`, and relevant task document before changing project files.
+4. If the work has no documents, create the epic and task documents first using [references/templates.md](references/templates.md).
+5. Keep the task checklist in `plan.md` synchronized with actual progress.
+6. Record material decisions, changed files, and verification results in the task document.
+7. Mark a task complete only after its stated completion conditions and checks pass.
+8. When the epic ends, update its final status and move the entire epic directory from `docs/epics/` to `docs/archive/` without renaming or restructuring it.
 
 Do not create work documents outside `docs/`. Do not silently assign ambiguous work to an unrelated epic; ask for the epic or propose a new one when the choice materially affects scope.
