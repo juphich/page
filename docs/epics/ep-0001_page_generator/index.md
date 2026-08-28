@@ -2,7 +2,7 @@
 
 ## 목적
 
-Markdown의 `page:gantt` 블록을 파싱해 독립 실행 가능한 단일 PAGE HTML로 변환하는 Rust CLI를 완성한다.
+Markdown의 `page:gantt` 블록을 파싱해 독립 실행 가능한 PAGE HTML 또는 PDF로 변환하고 입력 정합성을 검사하는 Rust CLI를 완성한다.
 
 ## 배경
 
@@ -11,11 +11,11 @@ Markdown의 `page:gantt` 블록을 파싱해 독립 실행 가능한 단일 PAGE
 ## 범위
 
 - `page:gantt` 블록과 CLI 계약 정의
-- PAGE 문서 및 Gantt 중간 모델 정의
+- 평면 task와 선택적 milestone·epic 계층을 지원하는 PAGE 및 Gantt 중간 모델 정의
 - Markdown fenced block 추출과 Gantt 데이터 검증
 - 기존 간트 프로토타입의 런타임 템플릿 이관
 - 안전하고 결정적인 단일 HTML 생성
-- Markdown 파일 입력과 HTML 파일 출력 CLI
+- Markdown 정합성 검사와 HTML/PDF 출력 CLI
 - 단위 및 통합 테스트와 예제 문서
 
 ## 제외 범위
@@ -28,8 +28,11 @@ Markdown의 `page:gantt` 블록을 파싱해 독립 실행 가능한 단일 PAGE
 ## 완료 조건
 
 - [ ] `page input.md -o output.html` 명령이 성공한다.
+- [ ] `page input.md --format pdf -o output.pdf` 명령이 성공한다.
+- [ ] `page input.md --dry-run`이 파일 생성 없이 정합성을 검사한다.
 - [ ] 유효한 `page:gantt` 입력이 독립 실행 가능한 단일 HTML로 생성된다.
+- [ ] 차트가 평면 task 목록과 선택적인 milestone·epic 계층을 표시한다.
+- [ ] 존재하는 Epic과 milestone의 진행률이 하위 완료 task 수로 계산된다.
 - [ ] 잘못된 입력은 원인을 식별할 수 있는 오류로 거부된다.
 - [ ] 동일한 입력은 동일한 HTML을 생성한다.
 - [ ] 생성기 단위·통합 테스트가 모두 통과한다.
-

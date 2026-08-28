@@ -2,7 +2,7 @@
 
 | 순서 | Epic | 단계 | 목표 | 주요 범위 | 선행 Epic | 상태 |
 |---:|---|---|---|---|---|---|
-| 1 | `ep-0001_page_generator` | MVP | Markdown의 `page:gantt`를 단일 PAGE HTML로 변환하는 CLI를 완성한다. | 문법·CLI 계약, 중간 모델, Markdown 파서, Gantt 검증, HTML 템플릿, 파일 입출력, 통합 테스트 | 없음 | 진행 예정 |
+| 1 | `ep-0001_page_generator` | MVP | Markdown의 `page:gantt`를 PAGE HTML/PDF로 변환하고 정합성을 검사하는 CLI를 완성한다. | 문법·CLI 계약, 중간 모델, Markdown 파서, Gantt 검증, HTML/PDF 출력, dry-run, 통합 테스트 | 없음 | 진행중 |
 | 2 | `PAGE-E002_간트 자기 편집과 저장 안정화` | MVP | 생성된 HTML에서 간트를 편집하고 저장한 뒤 다시 열어 편집할 수 있게 한다. | 편집 모드, 태스크·제목 편집, 막대 이동·리사이즈, HTML 재저장, 왕복 안정성 | ep-0001 | 계획 |
 | 3 | `PAGE-E003_스탠드얼론과 PDF 검증` | MVP | 오프라인 실행, 브라우저 호환과 PDF 출력 수용 기준을 충족한다. | 외부 의존성 제거, 브라우저별 저장 폴백, 인쇄 스타일, E2E 검증 | ep-0001, E002 | 계획 |
 | 4 | `PAGE-E004_일반 Markdown과 page-report` | 확장 | 일반 Markdown 콘텐츠와 구조화된 보고서 생성을 지원한다. | 제목·본문·표 렌더링, `page:report` 모델과 런타임 | E003 | 계획 |

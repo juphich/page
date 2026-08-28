@@ -44,6 +44,8 @@ open src/gantt.html          # macOS. 그 외에는 브라우저로 파일을 �
 
 - [docs/requirements.md](docs/requirements.md) — 요구사항 상세·범위·수용 기준
 - [docs/design.md](docs/design.md) — 아키텍처·자기 편집 문서 패턴·저장 전략·데이터 모델·로드맵
+- [docs/syntax.md](docs/syntax.md) — PAGE Markdown 블록 문법과 데이터 규칙
+- [docs/cli.md](docs/cli.md) — Rust 생성기 CLI 계약과 진단 정책
 
 ## 저장소 구조
 
