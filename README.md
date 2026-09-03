@@ -4,6 +4,8 @@
 
 Markdown을 Rust 기반 문서 생성기로 단일 PAGE HTML로 변환하고, 설치·서버·빌드 없이 브라우저에서 차트와 보고서를 편집·재저장하는 독립형 리포트 캔버스입니다.
 
+PAGE 생성기는 기본 HTML 셸, CSS와 JavaScript runtime을 내장한 단일 경량 CLI를 지향합니다. 별도 runtime 디렉터리나 필수 설정 없이 `page document.md`만으로 완성된 `document.html`을 생성하는 것이 기본 사용 방식입니다.
+
 현재 첫 번째 보고서 유형은 **간트차트**입니다. 산출물은 언제나 단일 `.html` 파일 하나이며, 그 파일 안에 데이터·뷰어·에디터가 모두 들어 있어 별도 도구 없이 다시 열어 편집하고 저장할 수 있습니다.
 
 > A standalone, self-editing report canvas.
@@ -44,6 +46,7 @@ open src/gantt.html          # macOS. 그 외에는 브라우저로 파일을 �
 
 - [docs/requirements.md](docs/requirements.md) — 요구사항 상세·범위·수용 기준
 - [docs/design.md](docs/design.md) — 아키텍처·자기 편집 문서 패턴·저장 전략·데이터 모델·로드맵
+- [docs/style.md](docs/style.md) — 기본 테마·문서/Gantt 구성 요소·인쇄 스타일 계약
 - [docs/syntax.md](docs/syntax.md) — PAGE Markdown 블록 문법과 데이터 규칙
 - [docs/cli.md](docs/cli.md) — Rust 생성기 CLI 계약과 진단 정책
 

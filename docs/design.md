@@ -4,6 +4,19 @@
 
 Rust 문서 생성기로 최초 문서를 만들고, 생성된 단일 HTML 파일 하나가 **보고서(결과물)이자 편집기**가 되게 한다. 생성 이후에는 서버·설치·네트워크 없이 문서를 열고, 편집하고, 전달하고, 다시 편집한다.
 
+생성기는 기본 HTML, CSS와 JavaScript runtime을 컴파일 시점에 내장한 단일 경량 CLI로 배포한다. 사용자가 별도 runtime이나 설정을 준비하지 않아도 `page document.md`만으로 기본 스타일이 적용된 `document.html`을 생성할 수 있어야 한다.
+
+## 1.1 경량 CLI 원칙
+
+- 기본 runtime 자산은 Rust의 컴파일 시점 문자열 내장 기능을 우선 사용한다.
+- runtime 자산을 위한 별도 설치 디렉터리, 검색 경로와 초기화 절차를 두지 않는다.
+- 기본 변환에는 설정 파일이나 네트워크 연결을 요구하지 않는다.
+- 사용자 CSS, 출력 형식과 경로 같은 추가 기능만 명시적 CLI 옵션으로 제공한다.
+- PDF를 위해 브라우저 엔진을 번들하지 않고 로컬 Chromium 계열 브라우저를 호출한다.
+- 단순한 리소스 내장을 위해 별도 resource framework를 추가하지 않는다. 내장 자산 규모나 관리 요구가 커질 때만 재검토한다.
+- release 빌드에서 크기 최적화와 symbol 제거를 적용하고 결과 바이너리 크기 및 주요 의존성을 측정한다.
+- 크기를 줄이기 위한 자체 파서 구현보다 정확성, 유지보수성과 실제 측정 결과를 우선한다.
+
 ## 2. 핵심 패턴 — 자기 편집 문서 (Self-Editing Document)
 
 문서가 자기 자신을 편집·재생성한다. 파일 하나가 세 가지를 모두 품는다.
@@ -38,9 +51,78 @@ Mermaid는 PAGE 전용 문법으로 복제하지 않는다. Mermaid의 gantt, fl
 
 생성 흐름은 다음과 같다.
 
-    Markdown → Rust Markdown Parser → PAGE Intermediate Model → 단일 PAGE HTML
-                                                                  ↓
-                                                   브라우저에서 보기·편집·재저장
+    Markdown 원문
+        ↓
+    Markdown 구조 분석
+        ↓
+    기본 Markdown 요소 + PAGE 전용 블록 식별
+        ↓
+    PAGE 블록 종류별 파싱·검증
+        ↓
+    PAGE 중간 모델
+        ↓
+    요소 종류별 HTML 렌더링 → 단일 PAGE HTML
+                                ↓
+                     브라우저에서 보기·편집·재저장
+
+변환기는 다음과 같은 계층으로 확장한다.
+
+```text
+Markdown 변환기
+├── 기본 Markdown 요소
+│   ├── 제목
+│   ├── 문단
+│   ├── 표
+│   ├── 인용구
+│   ├── 목록
+│   └── 코드 블록
+└── PAGE 블록 확장
+    ├── page:gantt
+    │   ├── 제목
+    │   ├── milestone
+    │   ├── epic
+    │   └── task
+    ├── page:chart
+    └── page:report
+```
+
+문서 파서는 기본 Markdown 요소와 fenced block을 원문 순서대로 식별한다. PAGE fenced block은 종류별 parser가 독립적으로 역직렬화하고 검증하며, 문서 renderer는 기본 요소와 PAGE 블록을 종류별 renderer에 위임한다. 새 PAGE 형식은 기존 형식의 모델을 변경하지 않고 parser, model과 renderer를 추가하는 방식으로 확장한다.
+
+공통 추상화에는 소스 위치, 속성과 진단 정보만 포함한다. 제목, 문단, Gantt task처럼 의미와 제약이 다른 요소를 하나의 범용 구성 요소로 평탄화하지 않는다. 초기 구현은 타입 안전한 enum 기반 경계를 사용하고, 동적 parser registry나 외부 플러그인 시스템은 실제 확장 요구가 생길 때 검토한다.
+
+### 스타일 계층
+
+문서 구조와 데이터, HTML 렌더링과 시각 스타일을 분리한다. HTML renderer는 의미 있는 요소, class와 `data-*` 속성만 생성하고 색상, 간격, 글꼴과 인쇄 표현은 CSS가 담당한다.
+
+구체적인 기본 색상, 타이포그래피, 간격, Markdown/Gantt 구성 요소와 인쇄 규칙은 [PAGE 기본 스타일 계약](style.md)을 따른다. 기본 스타일은 선택 사항이 아니며 PAGE가 생성하는 모든 문서에 포함한다.
+
+```text
+runtime/
+├── shell.html
+├── styles/
+│   ├── base.css
+│   ├── markdown.css
+│   ├── gantt.css
+│   ├── theme-default.css
+│   └── print.css
+└── scripts/
+    └── gantt.js
+```
+
+- `base.css`는 문서 레이아웃과 공통 요소를 정의한다.
+- `markdown.css`는 제목, 문단, 표, 인용구와 목록을 표현한다.
+- `gantt.css`는 timeline, milestone, epic과 task를 표현한다.
+- `theme-default.css`는 색상, 크기와 글꼴을 CSS custom property로 제공한다.
+- `print.css`는 PDF와 인쇄 환경의 표현을 담당한다.
+- 새 PAGE 블록은 기존 스타일을 변경하지 않고 자신의 component CSS를 추가한다.
+- 중간 모델에는 CSS 문자열이나 구체적인 시각 속성을 저장하지 않는다. 필요한 표현 선택은 의미 있는 상태나 제한된 테마 설정으로 나타낸다.
+- 개발 소스의 HTML, CSS와 JavaScript는 분리하지만 생성기가 이를 인라인하여 최종 산출물은 외부 의존성이 없는 단일 HTML로 유지한다.
+- 개발 소스에서 분리한 기본 runtime 자산은 컴파일 시점에 CLI 바이너리에 내장한다.
+- 별도 테마 설정이 없어도 완성된 문서가 생성되도록 기본 테마를 항상 인라인한다.
+- PAGE 전용 블록이 없는 일반 Markdown 문서에도 base, Markdown, 기본 테마와 인쇄 스타일을 적용한다.
+- 모든 결과물은 공통 `page-shell`과 `page-document` 구조를 사용하며 component는 이 문서 셸의 전역 레이아웃을 변경하지 않는다.
+- `--style`로 전달한 사용자 CSS는 layered 기본 bundle 뒤의 별도 unlayered style 요소에 지정 순서대로 인라인한다.
+- 사용자 CSS는 선언한 부분만 override하며 선언하지 않은 스타일은 PAGE 기본값을 유지한다.
 
 PAGE 중간 모델은 생성기와 브라우저 런타임 사이의 안정적인 계약이며, Markdown 입력 형식과 브라우저 렌더링 구현을 분리한다. 각 블록의 세부 모델은 해당 epic 설계에서 정의한다.
 
@@ -65,6 +147,12 @@ MVP의 구체적인 블록 문법은 [syntax.md](syntax.md), CLI 계약은 [cli.
 ## 6. 모델과 런타임의 방향
 
 - PAGE 중간 모델은 입력 파서, 출력 생성기와 브라우저 런타임 사이의 계약이다.
+- 문서 모델은 일반 Markdown 요소와 PAGE 전용 블록을 원문 순서대로 함께 보존한다.
+- 일반 Markdown 모델과 PAGE 전용 모델은 독립된 계층으로 유지한다.
+- PAGE 블록은 종류별 parser, model과 renderer를 하나의 확장 단위로 갖는다.
+- 공통 노드 정보와 각 블록의 도메인 데이터는 분리한다.
+- HTML renderer는 의미 구조를 생성하고 CSS는 화면 및 인쇄 스타일을 정의한다.
+- 분리된 runtime 자산은 생성 단계에서 단일 HTML로 인라인한다.
 - 새 문서 유형은 기존 유형을 훼손하지 않는 독립 블록으로 확장한다.
 - 배포 산출물은 데이터와 런타임을 포함한 단일 HTML이라는 불변식을 유지한다.
 - 세부 데이터 구조와 렌더링 규칙은 각 epic의 `design.md`에서 관리한다.

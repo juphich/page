@@ -2,7 +2,24 @@
 
 ## MVP 범위
 
-MVP는 Markdown 문서 안의 `page:gantt` fenced block 하나를 처리한다. 일반 Markdown 본문과 다른 PAGE 블록은 후속 epic에서 지원한다.
+MVP는 일반 Markdown 본문과 선택적인 `page:gantt` fenced block 하나를 처리한다. `page:chart`, `page:report`와 Mermaid 호환은 후속 epic에서 지원한다.
+
+지원하는 일반 Markdown 요소는 다음과 같다.
+
+- 제목 `h1`–`h6`, 문단과 줄바꿈
+- 강조, 굵게, 취소선과 인라인 코드
+- 순서 있는 목록, 순서 없는 목록과 task list
+- 링크와 이미지
+- 인용구, 구분선과 fenced/indented code block
+- GFM 표
+
+raw HTML은 단일 문서의 구조와 스크립트 안전성을 보장하기 위해 MVP에서 허용하지 않는다. raw HTML이 필요하면 후속 버전에서 별도의 신뢰 입력 옵션과 sanitization 정책을 정의한다.
+
+링크는 `http`, `https`, `mailto`, 문서 안의 fragment와 상대 경로를 허용한다. `javascript:`와 실행 가능한 `data:` 링크는 오류다. 이미지는 단일 파일 원칙에 따라 `data:image/*` URI만 허용하며 상대 파일과 원격 이미지는 asset embedding을 설계할 때까지 지원하지 않는다.
+
+첫 번째 level-1 제목을 문서 제목으로 사용하고 원래 inline 표현을 유지해 문서 header에 한 번만 렌더링한다. HTML `<title>`에는 이를 plain text로 평탄화한 값을 사용한다. 이후 제목은 content 영역에서 원래 순서대로 렌더링한다. level-1 제목이 없으면 `page:gantt`의 `title`을 문서 제목으로 사용하며 component 안에서 반복하지 않는다. 둘 다 없으면 `PAGE Document`를 사용한다.
+
+일반 fenced code block은 언어 식별자를 class로 보존해 코드로 렌더링한다. 정확히 `page:gantt`인 fenced block만 PAGE 블록으로 처리한다. 알려지지 않은 `page:*` 식별자는 오타를 숨기지 않도록 오류로 처리하고, 그 밖의 알려지지 않은 언어 식별자는 일반 코드 블록으로 렌더링한다.
 
 ````markdown
 ```page:gantt
@@ -98,7 +115,8 @@ Epic과 milestone의 진행률은 입력하지 않는다. 하위 task 상태로�
 
 ## 오류 조건
 
-- `page:gantt` 블록 누락 또는 둘 이상 존재
+- `page:gantt` 블록이 둘 이상 존재
+- raw HTML 또는 알 수 없는 `page:*` fenced block 사용
 - YAML 구문 오류 또는 지원하지 않는 스키마 버전
 - 중복 key, anchor, alias 또는 merge key 사용
 - 필수 필드 누락, 알 수 없는 필드 또는 정의되지 않은 상태
