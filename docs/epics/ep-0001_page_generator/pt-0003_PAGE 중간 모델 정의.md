@@ -215,19 +215,54 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 | 링크 scheme, 이미지 data URI | `SafeUrl::parse`, `DataImageUri::parse` |
 | ID가 여러 Gantt 블록을 통틀어 고유, 자동 ID, 이름 공백 제거, 기본값 | pt-0005 정규화·검증 |
 
-### 테스트
-
-- `CalendarDate`: 정상 파싱, 윤년 `2028-02-29` 허용, 평년 `2026-02-29` 거부, 자릿수 오류 거부, 순서 비교, `Display` 왕복
-- `DateRange`: 같은 날 허용, `start > end` 거부
-- `ItemId`: `a`와 64자 허용, 65자·`1abc`·`a.b`·빈 문자열 거부
-- 그룹 생성자: 빈 목록이면 `EmptyItems`
-- JSON 직렬화: 위 구조와 키 순서 일치, `progress` 키 없음, 상태 snake_case
-- `PageDocument::title_text`: 강조·링크·inline code를 텍스트로 평탄화, 제목이 없으면 `PAGE Document`
-
 ### 의존성
 
 - `page-core`에 `serde`(`derive`)를 추가하고 `serde_json`은 dev-dependency로 추가한다. pt-0007에서 일반 의존성으로 전환한다.
 - 모든 모델 타입은 `Debug`, `Clone`, `PartialEq`, `Eq`를 구현하고 날짜·상태 값 타입은 `Copy`를 구현한다.
+
+## 구현 체크리스트
+
+### 준비
+
+- [ ] `page-core`에 `serde`(`derive`)와 dev-dependency `serde_json`을 추가한다.
+- [ ] 기존 `src/document.rs`, `src/gantt.rs` 스텁을 삭제하고 `document/`, `gantt/` 디렉터리 모듈을 만든다.
+- [ ] `lib.rs`의 `document`, `gantt` 모듈 선언을 `pub(crate) mod`로 바꾼다.
+- [ ] 사용처가 생기기 전의 `dead_code` 경고를 두 모듈 단위 `allow`로 처리하고, 제거 시점을 pt-0007 후속 작업으로 기록한다.
+
+### Gantt 값 타입
+
+- [ ] `ItemId::parse`, `as_str`, `ItemIdError`를 구현한다.
+- [ ] `ItemId` 테스트: `a`와 64자 허용, 65자·`1abc`·`a.b`·빈 문자열 거부
+- [ ] `CalendarDate::parse`를 구현한다. 정확히 `YYYY-MM-DD` 10자, 숫자 자리, 월 1–12, 월별 일수와 윤년을 검사한다.
+- [ ] `CalendarDate`에 `Ord`, `Copy`, `Display`, 문자열 `Serialize`를 구현한다.
+- [ ] `CalendarDate` 테스트: 정상 파싱, `2028-02-29` 허용, `2026-02-29`·`2026-13-01`·`2026-9-1` 거부, 순서 비교, `Display` 왕복
+- [ ] `DateRange::new`, `start`, `end`, `DateRangeError`를 구현하고 `start`/`end` 키로 직렬화한다.
+- [ ] `DateRange` 테스트: 같은 날 허용, `start > end` 거부
+- [ ] `TaskStatus`에 `Default`(`NotStarted`), `as_str`, snake_case `Serialize`를 구현한다.
+- [ ] `SchemaVersion::V1`을 정수 `1`로 직렬화한다.
+
+### Gantt 구조
+
+- [ ] `GanttTask`, `Epic`, `MilestoneItem`, `Milestone`, `GanttItem`, `Gantt`와 `EmptyItems`를 구현한다.
+- [ ] `Gantt::new`, `Milestone::new`, `Epic::new`가 빈 자식 목록을 거부하고 `items()`, `tasks()` 조회 메서드를 제공한다.
+- [ ] 그룹 생성자 테스트: 빈 목록이면 `EmptyItems`
+- [ ] JSON 직렬화 테스트: milestone·epic·task 예시의 전체 JSON 일치, `type` 태그, `Epic.tasks`의 `items` 키, `start`/`end` 평탄화, 키 순서, `progress` 키 없음
+
+### 문서 모델
+
+- [ ] `SafeUrl::parse`를 구현한다. `http`, `https`, `mailto`, `#fragment`와 scheme 없는 상대 경로만 허용한다.
+- [ ] scheme 판정은 대소문자를 구분하지 않고, 앞뒤 공백과 제어 문자를 포함한 우회 입력(`" javascript:"`, `"java\tscript:"`)을 거부한다.
+- [ ] `DataImageUri::parse`를 구현한다. `data:image/` 접두어만 허용한다.
+- [ ] URL 테스트: 허용 형식 각각 통과, `javascript:`·`JAVASCRIPT:`·`data:text/html`·`file:` 거부, 우회 입력 거부
+- [ ] `MarkdownBlock`, `HeadingLevel`, `List`, `ListItem`, `Table`, `TableRow`, `TableCell`, `Alignment`, `Inline`을 구현한다.
+- [ ] `PageDocument`, `DocumentBlock`, `PageBlock`과 `PageDocument::title_text`를 구현한다.
+- [ ] `title_text` 테스트: 강조·링크·inline code·줄바꿈 평탄화, 제목이 없으면 `PAGE Document`
+
+### 마무리
+
+- [ ] 모든 모델 타입에 `Debug`, `Clone`, `PartialEq`, `Eq`를 구현하고 값 타입에 `Copy`를 구현한다.
+- [ ] `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, `cargo test --workspace`가 통과한다.
+- [ ] 완료 조건과 `plan.md`의 pt-0003 체크리스트를 갱신하고 검증 결과를 이 문서에 기록한다.
 
 ## 검증
 
