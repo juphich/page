@@ -10,6 +10,8 @@ PAGE 중간 모델과 런타임을 안전한 단일 HTML 문자열로 생성한�
 - `GanttItem` 계층과 task 상태를 직렬화한다.
 - 기본 Markdown 요소와 Gantt component를 문서의 원래 순서대로 HTML에 렌더링한다.
 - 문서 제목과 JSON을 안전하게 템플릿에 삽입한다.
+- heading마다 제목 텍스트 기반의 고유한 `id`를 생성한다.
+- Gantt block마다 JSON data block을 생성하고 component와 `data-page-data`로 연결한다.
 - 분리된 HTML, component CSS, 테마, 인쇄 CSS와 JavaScript 자산을 인라인한다.
 - 사용자 CSS를 지정 순서대로 layered 기본 스타일 뒤의 별도 unlayered style 요소에 안전하게 인라인한다.
 - 외부 리소스가 없고 동일 입력에 결정적인 출력을 만든다.

@@ -10,8 +10,8 @@ Markdown을 기본 문서 요소로 구조화하고 PAGE fenced block과 정확�
 - 제목, 문단, 표, 인용구, 목록, 링크, 이미지와 코드 등 MVP Markdown 요소를 구조화한다.
 - `page:gantt` fenced block을 식별한다.
 - raw HTML과 알 수 없는 `page:*` 블록을 진단한다.
-- 첫 번째 level-1 제목과 Gantt 제목을 이용해 문서 제목을 결정한다.
-- 중복 Gantt 블록과 구문 위치를 진단한다.
+- 첫 번째 level-1 제목으로 문서 제목을 결정한다. PAGE 블록 제목은 사용하지 않는다.
+- 목록 항목이나 인용구 안의 `page:*` 블록을 `PAGE104`로 진단한다.
 
 ## 완료 조건
 

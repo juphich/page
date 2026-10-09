@@ -53,7 +53,7 @@ Markdown 변환기
 - PAGE 블록 파서는 식별된 블록을 종류별 모델로 역직렬화하고 검증한다.
 - 문서 렌더러는 문서 순서를 유지하면서 기본 요소와 PAGE 블록을 종류별 렌더러에 위임한다.
 - 새 PAGE 형식은 기존 Gantt 모델을 변경하지 않고 별도 parser, model과 renderer로 추가한다.
-- 공통 추상화는 소스 위치, 속성과 진단 정보에 한정한다. 제목과 task처럼 의미가 다른 필드를 하나의 범용 구성 요소로 합치지 않는다.
+- 공통 추상화는 소스 위치와 진단 정보에 한정한다. 제목과 task처럼 의미가 다른 필드를 하나의 범용 구성 요소로 합치지 않는다.
 - 최초 구현은 타입 안전한 enum 분기를 사용하며 동적 플러그인 구조는 현재 범위에 포함하지 않는다.
 
 ## 스타일 계층
@@ -213,13 +213,19 @@ line과 column은 사용자 표시와 동일한 1부터 시작하는 값이며 `
 
 - 기본 Markdown과 GFM table, task list, strikethrough를 지원한다.
 - 첫 번째 level-1 heading은 문서 제목이며 원래 inline 표현을 유지해 header에 한 번만 렌더링한다. HTML `<title>`에는 inline 요소를 plain text로 평탄화한 값을 사용한다.
-- level-1 heading이 없으면 Gantt 제목, 둘 다 없으면 `PAGE Document`를 문서 제목으로 사용한다. fallback으로 사용한 Gantt 제목은 component 내부에서 반복하지 않는다.
+- level-1 heading이 없으면 `PAGE Document`를 문서 제목으로 사용한다. PAGE 블록의 제목은 문서 제목에 사용하지 않고 각 component 안에 렌더링한다.
 - 일반 code fence와 알 수 없는 비 PAGE 언어는 언어 class를 가진 code block으로 렌더링한다.
 - 알 수 없는 `page:*` fence는 오류로 처리한다.
+- 모든 heading에는 제목 텍스트로 만든 `id`를 붙여 문서 내 fragment 링크의 대상이 되게 한다.
+  - inline 요소를 plain text로 평탄화하고 영문자는 소문자로 바꾼다.
+  - 문자(한글 포함), 숫자, `-`, `_`는 유지하고 공백은 `-`로 바꾸며 그 밖의 문장 부호는 제거한다.
+  - 결과가 비면 `section`을 사용한다.
+  - 이미 사용된 `id`이면 문서 순서대로 `-1`, `-2`를 붙인다. 생성기가 만드는 `page-data-NNNN` 등 다른 `id`와도 겹치지 않게 같은 사용 목록으로 검사한다.
+- PAGE block은 문서 최상위에만 둘 수 있다. 목록 항목이나 인용구 안의 `page:*` fence는 오류로 처리한다.
 - raw HTML은 오류로 처리하며 그대로 통과시키거나 자동 sanitization하지 않는다.
 - 링크는 `http`, `https`, `mailto`, 문서 내 fragment와 상대 경로를 허용하고 `javascript`, `data` 등 실행 가능한 scheme은 거부한다.
 - 이미지는 단일 파일 원칙에 따라 `data:image/*` URI만 허용한다. 상대 파일과 원격 이미지는 후속 asset embedding 설계 전까지 오류로 처리한다.
-- `page:gantt`는 문서에 없거나 하나만 존재할 수 있다. 없는 문서는 일반 Markdown 문서로 정상 생성하며 둘 이상이면 오류다.
+- 문서는 `page:gantt`를 0개 이상 포함할 수 있다. 없는 문서는 일반 Markdown 문서로 생성하고, 여러 개인 문서는 각 블록을 독립된 Gantt component로 생성한다.
 - Markdown block과 Gantt component는 원문 순서대로 content 영역에 배치한다. 문서 제목으로 소비한 첫 level-1 heading만 header로 이동한다.
 
 ## 중간 모델
@@ -244,7 +250,8 @@ PageDocument
                     └── (Epic | Task)[]
 ```
 
-- 모든 문서 블록은 원문 순서와 소스 위치를 보존한다.
+- 모든 문서 블록은 원문 순서를 보존한다.
+- 소스 위치는 진단을 만드는 파싱·정규화 단계의 내부 타입이 보존하고 중간 모델에는 두지 않는다.
 - 일반 Markdown과 PAGE 블록의 모델 및 렌더링 책임은 서로 분리한다.
 - 이번 Epic은 정의된 기본 Markdown 요소를 실제 HTML로 렌더링한다. raw HTML, `page:chart`, `page:report`와 Mermaid는 후속 epic에서 다룬다.
 
@@ -257,7 +264,7 @@ PageDocument
 
 ## 진행률과 일정 파생
 
-Epic과 milestone의 진행률과 일정 범위는 저장하지 않는다.
+Epic과 milestone의 진행률과 일정 범위는 저장하지 않는다. Gantt runtime JS만 Gantt JSON에서 계산하며 Rust 중간 모델은 계산하지 않는다.
 
 ```text
 Epic 진행률 = Epic의 완료 task 수 / Epic의 전체 task 수 × 100
@@ -307,7 +314,7 @@ Milestone 진행률 = Milestone 하위의 완료 task 수 / Milestone 하위의 
 | `PAGE001` | 추가 진단이 생략됨 |
 | `PAGE101` | raw HTML은 지원하지 않음 |
 | `PAGE102` | 알 수 없는 `page:*` block |
-| `PAGE103` | 둘 이상의 `page:gantt` block |
+| `PAGE104` | 목록 항목이나 인용구 안에 놓인 `page:*` block |
 | `PAGE120` | Gantt YAML 구문 또는 금지 YAML 기능 |
 | `PAGE201` | 필수·알 수 없는 필드 또는 지원하지 않는 값 |
 | `PAGE202` | 날짜 형식 또는 날짜 범위 오류 |
@@ -343,8 +350,10 @@ runtime/
 - `page-core::runtime` 모듈이 `include_str!` 상수와 고정 자산 순서를 소유한다.
 - `page-cli`는 내장 runtime 경로나 설치 위치를 알지 못한다.
 - `base.css`, `markdown.css`, `theme-default.css`와 `print.css`는 모든 문서에 포함한다.
-- `gantt.css`, `gantt.js`와 Gantt JSON은 문서에 Gantt block이 있을 때만 포함한다. 향후 component도 실제 사용된 종류의 자산만 첫 등장 기준의 고정 순서로 포함한다.
+- `gantt.css`와 `gantt.js`는 문서에 Gantt block이 하나 이상 있을 때 한 번만 포함한다. Gantt JSON data block은 Gantt block마다 하나씩 생성한다. 향후 component도 실제 사용된 종류의 자산만 첫 등장 기준의 고정 순서로 포함한다.
 - `shell.html`에는 `__PAGE_DOCUMENT_TITLE__`, `__PAGE_STYLES__`, `__PAGE_DOCUMENT_BODY__`, `__PAGE_DATA__`, `__PAGE_SCRIPTS__` marker가 각각 정확히 한 번 존재해야 한다.
+- `__PAGE_DATA__`에는 PAGE block의 data block을 문서 순서대로 0개 이상 넣는다. 각 data block은 `<script type="application/json" id="page-data-NNNN" data-page-block="gantt">`이며 `NNNN`은 문서 안 PAGE block 등장 순서로 `0001`부터 붙인다.
+- 각 component 요소는 `data-page-data="page-data-NNNN"`으로 자신의 data block을 가리키고, runtime은 component마다 독립된 인스턴스와 상태를 만든다.
 - 사용하지 않는 component의 data와 script marker도 빈 문자열로 교체해 marker가 최종 HTML에 남지 않게 한다.
 - marker 누락이나 중복은 `PAGE301`이며 부분 HTML을 반환하지 않는다.
 - 기본 stylesheet는 `page-reset`, `page-base`, `page-markdown`, `page-components`, `page-theme`, `page-print` layer 순서로 조립한다.
@@ -376,7 +385,7 @@ runtime/
 |---|---|---|
 | `A01` | `# Release plan`과 일반 문단만 포함 | title과 header는 `Release plan`, 문단은 content에 렌더링되고 기본 CSS 전체가 인라인됨 |
 | `A02` | 제목 없는 일반 Markdown 문단 | title은 `PAGE Document`, 일반 문서가 오류 없이 생성됨 |
-| `A03` | 평면 task 두 개의 Gantt, 일부 ID·status 생략 | Gantt 제목을 문서 title fallback으로 사용하고 `task-0001`부터 ID와 `not_started`를 결정적으로 할당함 |
+| `A03` | H1 없이 평면 task 두 개의 Gantt, 일부 ID·status 생략 | 문서 title은 `PAGE Document`, Gantt 제목은 component 안에 렌더링하고 `task-0001`부터 ID와 `not_started`를 결정적으로 할당함 |
 | `A04` | milestone 아래 epic과 task | 원래 계층과 순서를 JSON·HTML에 보존하고 그룹 진행률은 하위 completed task로 계산함 |
 | `A05` | 일반 Markdown 사이에 Gantt 하나 | 첫 H1만 header로 이동하고 나머지 Markdown과 Gantt는 원문 순서대로 content에 렌더링됨 |
 | `A06` | `--style accent.css`가 accent 변수만 선언 | 나머지 기본 CSS는 유지되고 accent 변수만 사용자 값으로 override됨 |
@@ -386,6 +395,7 @@ runtime/
 | `A10` | 사용자 CSS에 `@import` 또는 `</style>` 포함 | `PAGE302`로 실패하고 HTML/PDF를 생성하지 않음 |
 | `A11` | 같은 Markdown, runtime과 CSS 내용·순서로 두 번 HTML 생성 | 두 결과가 바이트 단위로 동일함 |
 | `A12` | 같은 입력과 사용자 CSS로 HTML 및 PDF 생성 | PDF가 HTML과 같은 기본·사용자 스타일을 사용하고 편집 UI는 인쇄에서 제외됨 |
+| `A13` | Markdown 섹션 사이에 Gantt 두 개, 일부 ID 생략 | 두 component와 data block이 원문 순서로 생성되고, ID는 두 블록을 통틀어 고유하며 자동 ID 번호가 블록 사이에서 이어짐 |
 
 인수 테스트는 전체 HTML snapshot에만 의존하지 않는다. title, 문서 셸, block 순서, 내장 JSON, style/script 존재와 진단을 구조적으로 검사하고 결정성 시나리오에서만 전체 바이트를 비교한다.
 
@@ -403,16 +413,18 @@ Gantt
     └── Task 일정 막대
 ```
 
+- 한 문서의 여러 Gantt component는 각자의 data block으로 독립 초기화하며 상태를 공유하지 않는다.
 - 평면 task와 계층형 항목을 같은 렌더링 파이프라인에서 처리한다.
 - Epic과 milestone 행은 하위 task의 일정 범위와 계산 진행률을 표시한다.
 - task 막대는 상태별 기본 표현을 사용한다.
 - 기존 프로토타입의 편집·저장 기능은 보존하되 고도화는 후속 epic에서 진행한다.
+- 편집 버튼은 Gantt component마다, HTML 저장과 PDF 출력 버튼은 문서에 하나만 둔다. 저장 시 각 Gantt가 자기 data block을 갱신한 뒤 문서 전체를 저장한다.
 - 런타임 HTML은 의미 구조를, component CSS는 화면 표현을, print CSS는 PDF 표현을 담당한다.
 
 ## Task 경계
 
 - `pt-0002`: Markdown-HTML 변환 파이프라인과 공개 API
-- `pt-0003`: 중간 모델과 파생 값 API
+- `pt-0003`: 중간 모델
 - `pt-0004`: 기본 Markdown 구조화와 PAGE fenced block 추출
 - `pt-0005`: Gantt 역직렬화, 검증과 정규화
 - `pt-0006`: 계층형 Gantt 런타임
