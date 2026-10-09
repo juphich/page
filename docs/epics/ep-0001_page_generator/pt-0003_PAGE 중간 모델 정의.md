@@ -51,7 +51,8 @@ Markdown 파서와 HTML 생성기 사이의 안정적인 PAGE 중간 모델을 �
 crates/page/core/src/
 ├── document/
 │   ├── mod.rs        # PageDocument, DocumentBlock, PageBlock
-│   ├── markdown.rs   # MarkdownBlock, List, ListItem, Table, TableRow, TableCell, Inline
+│   ├── block.rs      # MarkdownBlock, HeadingLevel, List, ListItem, Table, TableRow, TableCell, Alignment
+│   ├── inline.rs     # Inline
 │   └── url.rs        # SafeUrl, DataImageUri
 └── gantt/
     ├── mod.rs        # Gantt, GanttItem, MilestoneItem, Milestone, Epic, GanttTask, EmptyItems
@@ -61,7 +62,8 @@ crates/page/core/src/
 ```
 
 - 기존 `src/document.rs`, `src/gantt.rs` 스텁은 위 모듈로 교체한다.
-- `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다.
+- `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다. 모델 파일은 파서와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 둔다.
+- 공개 API 오류 타입 `CompileError`는 `src/errors.rs`에 두고 `lib.rs`에서 `pub use`로 다시 내보낸다.
 - `document`는 `PageBlock::Gantt`로 `gantt`를 참조하고, `gantt`는 `document`를 참조하지 않는다.
 
 ### 문서 모델
@@ -224,10 +226,10 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 준비
 
-- [ ] `page-core`에 `serde`(`derive`)와 dev-dependency `serde_json`을 추가한다.
-- [ ] 기존 `src/document.rs`, `src/gantt.rs` 스텁을 삭제하고 `document/`, `gantt/` 디렉터리 모듈을 만든다.
-- [ ] `lib.rs`의 `document`, `gantt` 모듈 선언을 `pub(crate) mod`로 바꾼다.
-- [ ] 사용처가 생기기 전의 `dead_code` 경고를 두 모듈 단위 `allow`로 처리하고, 제거 시점을 pt-0007 후속 작업으로 기록한다.
+- [x] `page-core`에 `serde`(`derive`)와 dev-dependency `serde_json`을 추가한다.
+- [x] 기존 `src/document.rs`, `src/gantt.rs` 스텁을 삭제하고 `document/`, `gantt/` 디렉터리 모듈을 만든다.
+- [x] `lib.rs`의 `document`, `gantt` 모듈 선언을 `pub(crate) mod`로 바꾼다.
+- [x] 사용처가 생기기 전의 `dead_code` 경고를 두 모듈 단위 `allow`로 처리하고, 제거 시점을 pt-0007 후속 작업으로 기록한다.
 
 ### Gantt 값 타입
 
@@ -267,6 +269,10 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 ## 검증
 
 - `cargo test --workspace`
+
+### 진행 기록
+
+- 1단계 준비 (2026-10-10): serde 의존성, `document/`·`gantt/` 모듈 골격, `pub(crate)` 선언, 임시 `dead_code` 허용을 적용했다. 모델 파일은 파서 `src/markdown.rs`와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 정했고 `CompileError`를 `src/errors.rs`로 분리했다. `cargo fmt --check`, `cargo clippy`, `cargo test` 통과.
 
 ## 선행 작업
 

@@ -15,6 +15,7 @@ PAGE 중간 모델과 런타임을 안전한 단일 HTML 문자열로 생성한�
 - 분리된 HTML, component CSS, 테마, 인쇄 CSS와 JavaScript 자산을 인라인한다.
 - 사용자 CSS를 지정 순서대로 layered 기본 스타일 뒤의 별도 unlayered style 요소에 안전하게 인라인한다.
 - 외부 리소스가 없고 동일 입력에 결정적인 출력을 만든다.
+- 생성기가 중간 모델을 사용하면 `page-core`의 `document`, `gantt` 모듈에 둔 임시 `#![allow(dead_code)]`를 제거한다.
 
 ## 완료 조건
 
