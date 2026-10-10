@@ -50,7 +50,8 @@ Markdown 파서와 HTML 생성기 사이의 안정적인 PAGE 중간 모델을 �
 ```text
 crates/page/core/src/
 ├── document/
-│   ├── mod.rs        # PageDocument, DocumentBlock, PageBlock
+│   ├── mod.rs        # 하위 모듈 선언, PageDocument·DocumentBlock 재내보내기
+│   ├── page.rs       # PageDocument, DocumentBlock, PageBlock
 │   ├── block.rs      # MarkdownBlock, HeadingLevel, List, ListItem, Table, TableRow, TableCell, Alignment
 │   ├── inline.rs     # Inline
 │   └── url.rs        # SafeUrl, DataImageUri
@@ -63,6 +64,7 @@ crates/page/core/src/
 
 - 기존 `src/document.rs`, `src/gantt.rs` 스텁은 위 모듈로 교체한다.
 - `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다. 모델 파일은 파서와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 둔다.
+- 문서 최상위 타입은 `page.rs`에 두고, `page` 모듈은 비공개로 둔 채 `document/mod.rs`에서 `pub(crate) use page::{DocumentBlock, PageDocument}`로 다시 내보낸다. 사용처는 `crate::document::PageDocument`로 접근한다. 나머지 하위 모듈은 `pub(crate) mod`로 선언한다.
 - 공개 API 오류 타입 `CompileError`는 `src/errors.rs`에 두고 `lib.rs`에서 `pub use`로 다시 내보낸다.
 - `document`는 `PageBlock::Gantt`로 `gantt`를 참조하고, `gantt`는 `document`를 참조하지 않는다.
 
@@ -231,6 +233,16 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 - [x] `lib.rs`의 `document`, `gantt` 모듈 선언을 `pub(crate) mod`로 바꾼다.
 - [x] 사용처가 생기기 전의 `dead_code` 경고를 두 모듈 단위 `allow`로 처리하고, 제거 시점을 pt-0007 후속 작업으로 기록한다.
 
+### 문서 모델 (Markdown)
+
+- [x] `SafeUrl::parse`를 구현한다. `http`, `https`, `mailto`, `#fragment`와 scheme 없는 상대 경로만 허용한다.
+- [x] scheme 판정은 대소문자를 구분하지 않고, 앞뒤 공백과 제어 문자를 포함한 우회 입력(`" javascript:"`, `"java\tscript:"`)을 거부한다.
+- [x] `DataImageUri::parse`를 구현한다. `data:image/` 접두어만 허용한다.
+- [x] URL 테스트: 허용 형식 각각 통과, `javascript:`·`JAVASCRIPT:`·`data:text/html`·`file:` 거부, 우회 입력 거부
+- [x] `MarkdownBlock`, `HeadingLevel`, `List`, `ListItem`, `Table`, `TableRow`, `TableCell`, `Alignment`, `Inline`을 구현한다.
+- [x] `PageDocument`, `DocumentBlock::Markdown`과 `PageDocument::title_text`를 구현한다. `PageBlock`은 Gantt 구조 단계에서 연결한다.
+- [x] `title_text` 테스트: 강조·링크·inline code·줄바꿈 평탄화, 제목이 없으면 `PAGE Document`
+
 ### Gantt 값 타입
 
 - [ ] `ItemId::parse`, `as_str`, `ItemIdError`를 구현한다.
@@ -248,17 +260,8 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 - [ ] `GanttTask`, `Epic`, `MilestoneItem`, `Milestone`, `GanttItem`, `Gantt`와 `EmptyItems`를 구현한다.
 - [ ] `Gantt::new`, `Milestone::new`, `Epic::new`가 빈 자식 목록을 거부하고 `items()`, `tasks()` 조회 메서드를 제공한다.
 - [ ] 그룹 생성자 테스트: 빈 목록이면 `EmptyItems`
+- [ ] `PageBlock::Gantt`와 `DocumentBlock::Page`를 추가해 Gantt를 문서 모델에 연결한다.
 - [ ] JSON 직렬화 테스트: milestone·epic·task 예시의 전체 JSON 일치, `type` 태그, `Epic.tasks`의 `items` 키, `start`/`end` 평탄화, 키 순서, `progress` 키 없음
-
-### 문서 모델
-
-- [ ] `SafeUrl::parse`를 구현한다. `http`, `https`, `mailto`, `#fragment`와 scheme 없는 상대 경로만 허용한다.
-- [ ] scheme 판정은 대소문자를 구분하지 않고, 앞뒤 공백과 제어 문자를 포함한 우회 입력(`" javascript:"`, `"java\tscript:"`)을 거부한다.
-- [ ] `DataImageUri::parse`를 구현한다. `data:image/` 접두어만 허용한다.
-- [ ] URL 테스트: 허용 형식 각각 통과, `javascript:`·`JAVASCRIPT:`·`data:text/html`·`file:` 거부, 우회 입력 거부
-- [ ] `MarkdownBlock`, `HeadingLevel`, `List`, `ListItem`, `Table`, `TableRow`, `TableCell`, `Alignment`, `Inline`을 구현한다.
-- [ ] `PageDocument`, `DocumentBlock`, `PageBlock`과 `PageDocument::title_text`를 구현한다.
-- [ ] `title_text` 테스트: 강조·링크·inline code·줄바꿈 평탄화, 제목이 없으면 `PAGE Document`
 
 ### 마무리
 
@@ -272,6 +275,8 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 진행 기록
 
+- 2단계 문서 모델 (2026-10-11): `url.rs`(`SafeUrl`, `DataImageUri`), `block.rs`(Markdown 블록), `inline.rs`(`Inline`, `plain_text`), `page.rs`(`PageDocument`, `DocumentBlock::Markdown`, `title_text`)를 구현했다. 설계와 다른 점: `UrlError`는 `Empty`, `UnsafeCharacter`, `DisallowedScheme`, `NotDataImage`로 나누고 빈 링크 주소도 거부한다. scheme은 URL 표준대로 `/`, `?`, `#` 앞의 `:`로만 판정해 `docs/a:b.md` 같은 상대 경로를 허용한다. 평탄화 함수 `plain_text`는 heading id에서도 쓰도록 `inline.rs`에 두고 이미지는 alt 텍스트로 바꾼다. `page` 모듈은 비공개로 두고 `document`에서 `PageDocument`, `DocumentBlock`을 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(8개) 통과.
+- 단계 순서 변경 (2026-10-10): 사용자 요청으로 Markdown 문서 모델을 2단계로 앞당기고 Gantt 값 타입·구조를 3·4단계로 옮겼다. `PageBlock`과 `DocumentBlock::Page`는 Gantt 구조 단계에서 추가한다.
 - 1단계 준비 (2026-10-10): serde 의존성, `document/`·`gantt/` 모듈 골격, `pub(crate)` 선언, 임시 `dead_code` 허용을 적용했다. 모델 파일은 파서 `src/markdown.rs`와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 정했고 `CompileError`를 `src/errors.rs`로 분리했다. `cargo fmt --check`, `cargo clippy`, `cargo test` 통과.
 
 ## 선행 작업
