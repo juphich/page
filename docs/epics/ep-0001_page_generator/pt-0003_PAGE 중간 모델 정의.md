@@ -56,7 +56,7 @@ crates/page/core/src/
 │   ├── inline.rs     # Inline
 │   └── url.rs        # SafeUrl, DataImageUri
 └── gantt/
-    ├── mod.rs        # Gantt, GanttItem, MilestoneItem, Milestone, Epic, GanttTask, EmptyItems
+    ├── mod.rs        # Gantt, GanttItem, MilestoneItem, Milestone, Epic, GanttTask, EmptyItems, 값 타입 재내보내기
     ├── id.rs         # ItemId
     ├── date.rs       # CalendarDate, DateRange
     └── status.rs     # TaskStatus
@@ -65,6 +65,7 @@ crates/page/core/src/
 - 기존 `src/document.rs`, `src/gantt.rs` 스텁은 위 모듈로 교체한다.
 - `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다. 모델 파일은 파서와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 둔다.
 - 문서 최상위 타입은 `page.rs`에 두고, `page` 모듈은 비공개로 둔 채 `document/mod.rs`에서 `pub(crate) use page::{DocumentBlock, PageDocument}`로 다시 내보낸다. 사용처는 `crate::document::PageDocument`로 접근한다. 나머지 하위 모듈은 `pub(crate) mod`로 선언한다.
+- `gantt`의 `id`, `date`, `status` 모듈도 비공개로 두고 `gantt/mod.rs`에서 값 타입과 오류 타입을 `pub(crate) use`로 다시 내보낸다. 사용처는 `crate::gantt::ItemId`처럼 접근한다.
 - 공개 API 오류 타입 `CompileError`는 `src/errors.rs`에 두고 `lib.rs`에서 `pub use`로 다시 내보낸다.
 - `document`는 `PageBlock::Gantt`로 `gantt`를 참조하고, `gantt`는 `document`를 참조하지 않는다.
 
@@ -245,15 +246,15 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### Gantt 값 타입
 
-- [ ] `ItemId::parse`, `as_str`, `ItemIdError`를 구현한다.
-- [ ] `ItemId` 테스트: `a`와 64자 허용, 65자·`1abc`·`a.b`·빈 문자열 거부
-- [ ] `CalendarDate::parse`를 구현한다. 정확히 `YYYY-MM-DD` 10자, 숫자 자리, 월 1–12, 월별 일수와 윤년을 검사한다.
-- [ ] `CalendarDate`에 `Ord`, `Copy`, `Display`, 문자열 `Serialize`를 구현한다.
-- [ ] `CalendarDate` 테스트: 정상 파싱, `2028-02-29` 허용, `2026-02-29`·`2026-13-01`·`2026-9-1` 거부, 순서 비교, `Display` 왕복
-- [ ] `DateRange::new`, `start`, `end`, `DateRangeError`를 구현하고 `start`/`end` 키로 직렬화한다.
-- [ ] `DateRange` 테스트: 같은 날 허용, `start > end` 거부
-- [ ] `TaskStatus`에 `Default`(`NotStarted`), `as_str`, snake_case `Serialize`를 구현한다.
-- [ ] `SchemaVersion::V1`을 정수 `1`로 직렬화한다.
+- [x] `ItemId::parse`, `as_str`, `ItemIdError`를 구현한다.
+- [x] `ItemId` 테스트: `a`와 64자 허용, 65자·`1abc`·`a.b`·빈 문자열 거부
+- [x] `CalendarDate::parse`를 구현한다. 정확히 `YYYY-MM-DD` 10자, 숫자 자리, 월 1–12, 월별 일수와 윤년을 검사한다.
+- [x] `CalendarDate`에 `Ord`, `Copy`, `Display`, 문자열 `Serialize`를 구현한다.
+- [x] `CalendarDate` 테스트: 정상 파싱, `2028-02-29` 허용, `2026-02-29`·`2026-13-01`·`2026-9-1` 거부, 순서 비교, `Display` 왕복
+- [x] `DateRange::new`, `start`, `end`, `DateRangeError`를 구현하고 `start`/`end` 키로 직렬화한다.
+- [x] `DateRange` 테스트: 같은 날 허용, `start > end` 거부
+- [x] `TaskStatus`에 `Default`(`NotStarted`), `as_str`와 `as_str` 문자열로 쓰는 `Serialize`를 구현한다.
+- [x] `SchemaVersion::V1`을 정수 `1`로 직렬화한다.
 
 ### Gantt 구조
 
@@ -275,6 +276,7 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 진행 기록
 
+- 3단계 Gantt 값 타입 (2026-10-15): `id.rs`(`ItemId`), `date.rs`(`CalendarDate`, `DateRange`), `status.rs`(`TaskStatus`), `mod.rs`(`SchemaVersion`)를 구현했다. 설계와 다른 점: `ItemIdError`는 `Empty`, `TooLong`, `InvalidStart`, `InvalidCharacter`로, `DateError`는 `InvalidFormat`, `NonexistentDate`로 나누고 0년을 거부한다. pt-0005 중복 ID 검사를 위해 `ItemId`, `CalendarDate`에 `Hash`를 둔다. `TaskStatus`의 JSON 문자열은 serde 이름 규칙 대신 `as_str`를 써서 상태 이름을 한 곳에서만 정의한다. `gantt` 하위 모듈은 비공개로 두고 `gantt/mod.rs`에서 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(22개) 통과.
 - 2단계 문서 모델 (2026-10-11): `url.rs`(`SafeUrl`, `DataImageUri`), `block.rs`(Markdown 블록), `inline.rs`(`Inline`, `plain_text`), `page.rs`(`PageDocument`, `DocumentBlock::Markdown`, `title_text`)를 구현했다. 설계와 다른 점: `UrlError`는 `Empty`, `UnsafeCharacter`, `DisallowedScheme`, `NotDataImage`로 나누고 빈 링크 주소도 거부한다. scheme은 URL 표준대로 `/`, `?`, `#` 앞의 `:`로만 판정해 `docs/a:b.md` 같은 상대 경로를 허용한다. 평탄화 함수 `plain_text`는 heading id에서도 쓰도록 `inline.rs`에 두고 이미지는 alt 텍스트로 바꾼다. `page` 모듈은 비공개로 두고 `document`에서 `PageDocument`, `DocumentBlock`을 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(8개) 통과.
 - 단계 순서 변경 (2026-10-10): 사용자 요청으로 Markdown 문서 모델을 2단계로 앞당기고 Gantt 값 타입·구조를 3·4단계로 옮겼다. `PageBlock`과 `DocumentBlock::Page`는 Gantt 구조 단계에서 추가한다.
 - 1단계 준비 (2026-10-10): serde 의존성, `document/`·`gantt/` 모듈 골격, `pub(crate)` 선언, 임시 `dead_code` 허용을 적용했다. 모델 파일은 파서 `src/markdown.rs`와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 정했고 `CompileError`를 `src/errors.rs`로 분리했다. `cargo fmt --check`, `cargo clippy`, `cargo test` 통과.
