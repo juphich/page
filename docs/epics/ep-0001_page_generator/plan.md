@@ -20,7 +20,7 @@
   - [x] 구현 1단계: 준비
   - [x] 구현 2단계: 문서 모델 (Markdown)
   - [x] 구현 3단계: Gantt 값 타입
-  - [ ] 구현 4단계: Gantt 구조
+  - [x] 구현 4단계: Gantt 구조
   - [ ] 구현 5단계: 마무리
 - [ ] [pt-0004 Markdown 문서 파서 구현](<pt-0004_Markdown 문서 파서 구현.md>)
   - [ ] 기본 Markdown 요소를 구조화하고 fenced block과 소스 위치를 추출한다.

@@ -11,4 +11,4 @@ pub(crate) mod url;
 
 // Unused until pt-0007 for the same reason as above.
 #[allow(unused_imports)]
-pub(crate) use page::{DocumentBlock, PageDocument};
+pub(crate) use page::{DocumentBlock, PageBlock, PageDocument};

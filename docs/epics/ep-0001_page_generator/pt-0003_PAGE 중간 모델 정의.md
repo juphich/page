@@ -56,7 +56,8 @@ crates/page/core/src/
 │   ├── inline.rs     # Inline
 │   └── url.rs        # SafeUrl, DataImageUri
 └── gantt/
-    ├── mod.rs        # Gantt, GanttItem, MilestoneItem, Milestone, Epic, GanttTask, EmptyItems, 값 타입 재내보내기
+    ├── mod.rs        # 하위 모듈 선언, 타입 재내보내기
+    ├── chart.rs      # Gantt, SchemaVersion, GanttItem, MilestoneItem, Milestone, Epic, GanttTask, EmptyItems
     ├── id.rs         # ItemId
     ├── date.rs       # CalendarDate, DateRange
     └── status.rs     # TaskStatus
@@ -65,7 +66,7 @@ crates/page/core/src/
 - 기존 `src/document.rs`, `src/gantt.rs` 스텁은 위 모듈로 교체한다.
 - `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다. 모델 파일은 파서와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 둔다.
 - 문서 최상위 타입은 `page.rs`에 두고, `page` 모듈은 비공개로 둔 채 `document/mod.rs`에서 `pub(crate) use page::{DocumentBlock, PageDocument}`로 다시 내보낸다. 사용처는 `crate::document::PageDocument`로 접근한다. 나머지 하위 모듈은 `pub(crate) mod`로 선언한다.
-- `gantt`의 `id`, `date`, `status` 모듈도 비공개로 두고 `gantt/mod.rs`에서 값 타입과 오류 타입을 `pub(crate) use`로 다시 내보낸다. 사용처는 `crate::gantt::ItemId`처럼 접근한다.
+- `gantt`의 `chart`, `id`, `date`, `status` 모듈도 비공개로 두고 `gantt/mod.rs`에서 구조·값 타입과 오류 타입을 `pub(crate) use`로 다시 내보낸다. 사용처는 `crate::gantt::ItemId`처럼 접근한다.
 - 공개 API 오류 타입 `CompileError`는 `src/errors.rs`에 두고 `lib.rs`에서 `pub use`로 다시 내보낸다.
 - `document`는 `PageBlock::Gantt`로 `gantt`를 참조하고, `gantt`는 `document`를 참조하지 않는다.
 
@@ -139,19 +140,18 @@ pub(crate) struct Gantt {
     items: Vec<GanttItem>, // new()가 1개 이상을 보장
 }
 
-#[derive(Serialize)]
-#[serde(into = "u8")]
-pub(crate) enum SchemaVersion { V1 }
+pub(crate) enum SchemaVersion { V1 } // 정수 1로 직렬화
 
 #[derive(Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(untagged)] // type 키는 각 구조체가 쓴다
 pub(crate) enum GanttItem { Task(GanttTask), Epic(Epic), Milestone(Milestone) }
 
 #[derive(Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(untagged)]
 pub(crate) enum MilestoneItem { Task(GanttTask), Epic(Epic) }
 
 #[derive(Serialize)]
+#[serde(tag = "type", rename = "milestone")]
 pub(crate) struct Milestone {
     pub id: ItemId,
     pub name: String,
@@ -159,6 +159,7 @@ pub(crate) struct Milestone {
 }
 
 #[derive(Serialize)]
+#[serde(tag = "type", rename = "epic")]
 pub(crate) struct Epic {
     pub id: ItemId,
     pub name: String,
@@ -167,6 +168,7 @@ pub(crate) struct Epic {
 }
 
 #[derive(Serialize)]
+#[serde(tag = "type", rename = "task")]
 pub(crate) struct GanttTask {
     pub id: ItemId,
     pub name: String,
@@ -178,6 +180,7 @@ pub(crate) struct GanttTask {
 
 - `Gantt::new`, `Milestone::new`, `Epic::new`는 자식 목록이 비어 있으면 `EmptyItems`를 반환한다.
 - 자식 목록은 비공개 필드이며 `Gantt::items()`, `Milestone::items()`, `Epic::tasks()` 조회 메서드로 읽는다.
+- `type` 키는 enum이 아니라 `Milestone`, `Epic`, `GanttTask`가 직접 쓴다. `Epic`은 task를 enum 없이 담으므로 enum에 태그를 두면 epic 안의 task에 `type`이 빠진다.
 - `MilestoneItem`에는 Milestone이 없고 `Epic`은 `GanttTask`만 소유하므로 milestone·epic 중첩은 표현할 수 없다.
 
 ### 값 타입
@@ -258,11 +261,11 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### Gantt 구조
 
-- [ ] `GanttTask`, `Epic`, `MilestoneItem`, `Milestone`, `GanttItem`, `Gantt`와 `EmptyItems`를 구현한다.
-- [ ] `Gantt::new`, `Milestone::new`, `Epic::new`가 빈 자식 목록을 거부하고 `items()`, `tasks()` 조회 메서드를 제공한다.
-- [ ] 그룹 생성자 테스트: 빈 목록이면 `EmptyItems`
-- [ ] `PageBlock::Gantt`와 `DocumentBlock::Page`를 추가해 Gantt를 문서 모델에 연결한다.
-- [ ] JSON 직렬화 테스트: milestone·epic·task 예시의 전체 JSON 일치, `type` 태그, `Epic.tasks`의 `items` 키, `start`/`end` 평탄화, 키 순서, `progress` 키 없음
+- [x] `GanttTask`, `Epic`, `MilestoneItem`, `Milestone`, `GanttItem`, `Gantt`와 `EmptyItems`를 구현한다.
+- [x] `Gantt::new`, `Milestone::new`, `Epic::new`가 빈 자식 목록을 거부하고 `items()`, `tasks()` 조회 메서드를 제공한다.
+- [x] 그룹 생성자 테스트: 빈 목록이면 `EmptyItems`
+- [x] `PageBlock::Gantt`와 `DocumentBlock::Page`를 추가해 Gantt를 문서 모델에 연결한다.
+- [x] JSON 직렬화 테스트: milestone·epic·task 예시의 전체 JSON 일치, `type` 태그, `Epic.tasks`의 `items` 키, `start`/`end` 평탄화, 키 순서, `progress` 키 없음
 
 ### 마무리
 
@@ -276,6 +279,7 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 진행 기록
 
+- 4단계 Gantt 구조 (2026-10-18): `chart.rs`에 `Gantt`, `SchemaVersion`, `GanttItem`, `MilestoneItem`, `Milestone`, `Epic`, `GanttTask`, `EmptyItems`를 구현하고 `page.rs`에 `PageBlock::Gantt`, `DocumentBlock::Page`를 추가했다. 설계와 다른 점: `gantt/mod.rs`는 `document/mod.rs`처럼 선언과 재내보내기만 두고 구조 타입과 `SchemaVersion`을 `chart.rs`로 옮겼다. 전체 JSON 테스트에서 epic 안의 task에 `type`이 빠지는 문제가 드러나, `type` 태그를 enum 대신 `Milestone`, `Epic`, `GanttTask` 구조체에 두고 enum은 `untagged`로 바꿨다. `cargo fmt --check`, `cargo clippy`, `cargo test`(25개) 통과.
 - 3단계 Gantt 값 타입 (2026-10-15): `id.rs`(`ItemId`), `date.rs`(`CalendarDate`, `DateRange`), `status.rs`(`TaskStatus`), `mod.rs`(`SchemaVersion`)를 구현했다. 설계와 다른 점: `ItemIdError`는 `Empty`, `TooLong`, `InvalidStart`, `InvalidCharacter`로, `DateError`는 `InvalidFormat`, `NonexistentDate`로 나누고 0년을 거부한다. pt-0005 중복 ID 검사를 위해 `ItemId`, `CalendarDate`에 `Hash`를 둔다. `TaskStatus`의 JSON 문자열은 serde 이름 규칙 대신 `as_str`를 써서 상태 이름을 한 곳에서만 정의한다. `gantt` 하위 모듈은 비공개로 두고 `gantt/mod.rs`에서 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(22개) 통과.
 - 2단계 문서 모델 (2026-10-11): `url.rs`(`SafeUrl`, `DataImageUri`), `block.rs`(Markdown 블록), `inline.rs`(`Inline`, `plain_text`), `page.rs`(`PageDocument`, `DocumentBlock::Markdown`, `title_text`)를 구현했다. 설계와 다른 점: `UrlError`는 `Empty`, `UnsafeCharacter`, `DisallowedScheme`, `NotDataImage`로 나누고 빈 링크 주소도 거부한다. scheme은 URL 표준대로 `/`, `?`, `#` 앞의 `:`로만 판정해 `docs/a:b.md` 같은 상대 경로를 허용한다. 평탄화 함수 `plain_text`는 heading id에서도 쓰도록 `inline.rs`에 두고 이미지는 alt 텍스트로 바꾼다. `page` 모듈은 비공개로 두고 `document`에서 `PageDocument`, `DocumentBlock`을 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(8개) 통과.
 - 단계 순서 변경 (2026-10-10): 사용자 요청으로 Markdown 문서 모델을 2단계로 앞당기고 Gantt 값 타입·구조를 3·4단계로 옮겼다. `PageBlock`과 `DocumentBlock::Page`는 Gantt 구조 단계에서 추가한다.

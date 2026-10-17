@@ -2,6 +2,7 @@
 
 use crate::document::block::MarkdownBlock;
 use crate::document::inline::{Inline, plain_text};
+use crate::gantt::Gantt;
 
 const DEFAULT_TITLE: &str = "PAGE Document";
 
@@ -16,6 +17,13 @@ pub(crate) struct PageDocument {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum DocumentBlock {
     Markdown(MarkdownBlock),
+    Page(PageBlock),
+}
+
+/// PAGE-specific block. Add a variant per new `page:*` block kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum PageBlock {
+    Gantt(Gantt),
 }
 
 impl PageDocument {
