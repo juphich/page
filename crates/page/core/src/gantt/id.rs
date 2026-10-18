@@ -12,7 +12,7 @@ const MAX_LEN: usize = 64;
 #[serde(transparent)]
 pub(crate) struct ItemId(String);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ItemIdError {
     Empty,
     TooLong,

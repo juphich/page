@@ -17,9 +17,9 @@ Markdown 파서와 HTML 생성기 사이의 안정적인 PAGE 중간 모델을 �
 
 ## 완료 조건
 
-- [ ] 일반 Markdown 요소와 PAGE 전용 블록을 함께 표현하는 typed model이 구현된다.
-- [ ] 새 PAGE 블록 종류를 독립적으로 추가할 수 있는 모델 경계가 마련된다.
-- [ ] 모델 생성과 직렬화 테스트가 통과한다.
+- [x] 일반 Markdown 요소와 PAGE 전용 블록을 함께 표현하는 typed model이 구현된다.
+- [x] 새 PAGE 블록 종류를 독립적으로 추가할 수 있는 모델 경계가 마련된다.
+- [x] 모델 생성과 직렬화 테스트가 통과한다.
 
 ## 결정 사항
 
@@ -50,7 +50,7 @@ Markdown 파서와 HTML 생성기 사이의 안정적인 PAGE 중간 모델을 �
 ```text
 crates/page/core/src/
 ├── document/
-│   ├── mod.rs        # 하위 모듈 선언, PageDocument·DocumentBlock 재내보내기
+│   ├── mod.rs        # 하위 모듈 선언, PageDocument·DocumentBlock·PageBlock 재내보내기
 │   ├── page.rs       # PageDocument, DocumentBlock, PageBlock
 │   ├── block.rs      # MarkdownBlock, HeadingLevel, List, ListItem, Table, TableRow, TableCell, Alignment
 │   ├── inline.rs     # Inline
@@ -65,7 +65,7 @@ crates/page/core/src/
 
 - 기존 `src/document.rs`, `src/gantt.rs` 스텁은 위 모듈로 교체한다.
 - `src/markdown.rs`(pt-0004 파서)와 `src/generator.rs`(pt-0007)는 이 task에서 변경하지 않는다. 모델 파일은 파서와 이름이 겹치지 않도록 `block.rs`, `inline.rs`로 둔다.
-- 문서 최상위 타입은 `page.rs`에 두고, `page` 모듈은 비공개로 둔 채 `document/mod.rs`에서 `pub(crate) use page::{DocumentBlock, PageDocument}`로 다시 내보낸다. 사용처는 `crate::document::PageDocument`로 접근한다. 나머지 하위 모듈은 `pub(crate) mod`로 선언한다.
+- 문서 최상위 타입은 `page.rs`에 두고, `page` 모듈은 비공개로 둔 채 `document/mod.rs`에서 `pub(crate) use page::{DocumentBlock, PageBlock, PageDocument}`로 다시 내보낸다. 사용처는 `crate::document::PageDocument`로 접근한다. 나머지 하위 모듈은 `pub(crate) mod`로 선언한다.
 - `gantt`의 `chart`, `id`, `date`, `status` 모듈도 비공개로 두고 `gantt/mod.rs`에서 구조·값 타입과 오류 타입을 `pub(crate) use`로 다시 내보낸다. 사용처는 `crate::gantt::ItemId`처럼 접근한다.
 - 공개 API 오류 타입 `CompileError`는 `src/errors.rs`에 두고 `lib.rs`에서 `pub use`로 다시 내보낸다.
 - `document`는 `PageBlock::Gantt`로 `gantt`를 참조하고, `gantt`는 `document`를 참조하지 않는다.
@@ -269,16 +269,21 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 마무리
 
-- [ ] 모든 모델 타입에 `Debug`, `Clone`, `PartialEq`, `Eq`를 구현하고 값 타입에 `Copy`를 구현한다.
-- [ ] `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, `cargo test --workspace`가 통과한다.
-- [ ] 완료 조건과 `plan.md`의 pt-0003 체크리스트를 갱신하고 검증 결과를 이 문서에 기록한다.
+- [x] 모든 모델 타입에 `Debug`, `Clone`, `PartialEq`, `Eq`를 구현하고 값 타입에 `Copy`를 구현한다.
+- [x] `cargo fmt --all --check`, `cargo clippy --workspace --all-targets`, `cargo test --workspace`가 통과한다.
+- [x] 완료 조건과 `plan.md`의 pt-0003 체크리스트를 갱신하고 검증 결과를 이 문서에 기록한다.
 
 ## 검증
 
-- `cargo test --workspace`
+- `cargo fmt --all --check`
+- `cargo clippy --workspace --all-targets`: 경고 없음
+- `cargo test --workspace`: 25개 통과 (문서 모델 8, Gantt 값 타입 14, Gantt 구조 3)
+- 모든 모델 타입의 `Debug`, `Clone`, `PartialEq`, `Eq`와 값·오류 타입의 `Copy`를 확인했다.
+- 완료 조건 대조: Markdown과 PAGE 블록을 함께 담는 `DocumentBlock`, 새 PAGE 블록 종류를 variant로 추가하는 `PageBlock` 경계, 생성자·직렬화 테스트
 
 ### 진행 기록
 
+- 5단계 마무리 (2026-10-18): 모델 타입의 trait 구현을 점검하고 다른 오류 타입과 맞춰 `ItemIdError`에 `Copy`를 추가했다. 완료 조건과 `plan.md`를 갱신하고 검증 결과를 기록했다. `version`은 형식 변경에 대비해 유지하기로 했다.
 - 4단계 Gantt 구조 (2026-10-18): `chart.rs`에 `Gantt`, `SchemaVersion`, `GanttItem`, `MilestoneItem`, `Milestone`, `Epic`, `GanttTask`, `EmptyItems`를 구현하고 `page.rs`에 `PageBlock::Gantt`, `DocumentBlock::Page`를 추가했다. 설계와 다른 점: `gantt/mod.rs`는 `document/mod.rs`처럼 선언과 재내보내기만 두고 구조 타입과 `SchemaVersion`을 `chart.rs`로 옮겼다. 전체 JSON 테스트에서 epic 안의 task에 `type`이 빠지는 문제가 드러나, `type` 태그를 enum 대신 `Milestone`, `Epic`, `GanttTask` 구조체에 두고 enum은 `untagged`로 바꿨다. `cargo fmt --check`, `cargo clippy`, `cargo test`(25개) 통과.
 - 3단계 Gantt 값 타입 (2026-10-15): `id.rs`(`ItemId`), `date.rs`(`CalendarDate`, `DateRange`), `status.rs`(`TaskStatus`), `mod.rs`(`SchemaVersion`)를 구현했다. 설계와 다른 점: `ItemIdError`는 `Empty`, `TooLong`, `InvalidStart`, `InvalidCharacter`로, `DateError`는 `InvalidFormat`, `NonexistentDate`로 나누고 0년을 거부한다. pt-0005 중복 ID 검사를 위해 `ItemId`, `CalendarDate`에 `Hash`를 둔다. `TaskStatus`의 JSON 문자열은 serde 이름 규칙 대신 `as_str`를 써서 상태 이름을 한 곳에서만 정의한다. `gantt` 하위 모듈은 비공개로 두고 `gantt/mod.rs`에서 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(22개) 통과.
 - 2단계 문서 모델 (2026-10-11): `url.rs`(`SafeUrl`, `DataImageUri`), `block.rs`(Markdown 블록), `inline.rs`(`Inline`, `plain_text`), `page.rs`(`PageDocument`, `DocumentBlock::Markdown`, `title_text`)를 구현했다. 설계와 다른 점: `UrlError`는 `Empty`, `UnsafeCharacter`, `DisallowedScheme`, `NotDataImage`로 나누고 빈 링크 주소도 거부한다. scheme은 URL 표준대로 `/`, `?`, `#` 앞의 `:`로만 판정해 `docs/a:b.md` 같은 상대 경로를 허용한다. 평탄화 함수 `plain_text`는 heading id에서도 쓰도록 `inline.rs`에 두고 이미지는 alt 텍스트로 바꾼다. `page` 모듈은 비공개로 두고 `document`에서 `PageDocument`, `DocumentBlock`을 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(8개) 통과.
