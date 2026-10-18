@@ -27,6 +27,7 @@ CLI는 기본 HTML 셸, CSS와 JavaScript runtime을 내장한 단일 경량 실
 - `page:report`, `page:chart`와 Mermaid 렌더링
 - raw HTML 허용과 sanitization
 - 긴 일정의 PDF 페이지 분할
+- 파일·인터넷 이미지를 HTML에 넣는 이미지 asset 처리 (`docs/backlogs/백로그_이미지 asset 처리.md`)
 
 ## 완료 조건
 

@@ -224,7 +224,7 @@ line과 column은 사용자 표시와 동일한 1부터 시작하는 값이며 `
 - PAGE block은 문서 최상위에만 둘 수 있다. 목록 항목이나 인용구 안의 `page:*` fence는 오류로 처리한다.
 - raw HTML은 오류로 처리하며 그대로 통과시키거나 자동 sanitization하지 않는다.
 - 링크는 `http`, `https`, `mailto`, 문서 내 fragment와 상대 경로를 허용하고 `javascript`, `data` 등 실행 가능한 scheme은 거부한다.
-- 이미지는 단일 파일 원칙에 따라 `data:image/*` URI만 허용한다. 상대 파일과 원격 이미지는 후속 asset embedding 설계 전까지 오류로 처리한다.
+- 이미지는 아직 구현하지 않는다. 주소 종류와 관계없이 `Image not supported yet` 문구와 alt를 담은 빈 박스로 렌더링하고 진단은 내지 않는다. 이미지를 단일 HTML에 넣는 처리는 backlog에서 설계한다.
 - 문서는 `page:gantt`를 0개 이상 포함할 수 있다. 없는 문서는 일반 Markdown 문서로 생성하고, 여러 개인 문서는 각 블록을 독립된 Gantt component로 생성한다.
 - Markdown block과 Gantt component는 원문 순서대로 content 영역에 배치한다. 문서 제목으로 소비한 첫 level-1 heading만 header로 이동한다.
 

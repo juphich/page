@@ -22,9 +22,6 @@
   - [x] 구현 3단계: Gantt 값 타입
   - [x] 구현 4단계: Gantt 구조
   - [x] 구현 5단계: 마무리
-- [ ] [pt-0011 이미지 asset 처리 구현](<pt-0011_이미지 asset 처리 구현.md>)
-  - [ ] 이미지 출처와 관계없는 공통 `AssetResolver` 인터페이스와 이미지 처리를 구현한다.
-  - [ ] 상대 파일 이미지를 단일 HTML 안의 `data:image` URI로 넣는다.
 - [ ] [pt-0004 Markdown 문서 파서 구현](<pt-0004_Markdown 문서 파서 구현.md>)
   - [ ] 기본 Markdown 요소를 구조화하고 fenced block과 소스 위치를 추출한다.
   - [ ] 파서 단위 테스트를 작성한다.

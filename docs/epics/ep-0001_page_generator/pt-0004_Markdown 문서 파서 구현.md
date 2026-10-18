@@ -27,7 +27,7 @@ Markdown 원문을 기본 문서 요소와 PAGE 블록 원문으로 구조화하
 - 위치 정보는 PAGE 블록 원문(`RawPageBlock`)에만 남긴다. Markdown 단계 오류는 파서가 읽는 즉시 위치와 함께 진단하므로 Markdown 블록은 위치 없이 pt-0003 모델을 그대로 쓴다.
 - 진단 타입(`Diagnostic` 등)은 파서가 처음 쓰므로 pt-0004에서 design.md 계약대로 공개 타입으로 구현한다. 모든 단계의 진단을 모은 뒤에 하는 정렬과 100개 제한은 `validate`, `compile_html`을 만드는 pt-0007에서 구현한다.
 - 링크 주소는 `SafeUrl::parse`로 검사해 `javascript:` 등 실행 가능한 주소를 `PAGE105`로 거부한다. 인터넷·메일·문서 안·상대 경로 링크는 허용한다.
-- 이미지는 pt-0011의 공통 이미지 처리를 거친다. 파서는 이미지를 만나는 즉시 공통 처리를 호출하고, 실패하면 그 자리의 위치로 `PAGE106`을 진단한다. 그래서 이미지 참조의 위치를 따로 보존하지 않는다.
+- 이미지는 아직 구현하지 않는다. 주소 종류와 관계없이 모든 이미지를 `src` 없는 `Inline::Image`로 만들고, pt-0007이 `Image not supported yet` 문구와 alt를 담은 빈 박스로 렌더링한다. 진단은 내지 않는다. 이미지를 HTML에 넣는 처리는 backlog(`docs/backlogs/백로그_이미지 asset 처리.md`)로 미룬다.
 - fenced code 언어가 대소문자 구분 없이 `page:`로 시작하면 PAGE 블록 후보로 본다. 정확히 `page:gantt`만 Gantt이고 `Page:Gantt` 같은 나머지는 오타를 숨기지 않도록 `PAGE102`로 진단한다.
 - 파서와 모델은 스타일을 정하지 않는다. 화면 표현은 pt-0007이 만드는 의미 class·`data-*` 속성과 built-in CSS 또는 사용자 CSS(`--style`)가 결정하고, 파서는 그에 필요한 의미 정보만 보존한다.
 - 파서는 오류가 있어도 멈추지 않고 문서 끝까지 진단을 모은다. 오류가 난 요소는 결과에서 빼거나 내용만 남긴다.
@@ -95,7 +95,7 @@ crates/page/core/src/
 ### 파서 결과
 
 ```rust
-pub(crate) fn parse(source_name: &str, content: &str, assets: &dyn AssetResolver) -> ParseOutput;
+pub(crate) fn parse(source_name: &str, content: &str) -> ParseOutput;
 
 pub(crate) struct ParseOutput {
     pub(crate) document: ParsedDocument,
@@ -151,7 +151,7 @@ pub(crate) enum PageBlockKind { Gantt }
 | `` `code` `` | `Inline::Code` |
 | `*강조*`, `**강조**`, `~~취소~~` | `Emphasis`, `Strong`, `Strikethrough` |
 | 링크, autolink | `Link`. 이메일 autolink는 `mailto:`를 붙여 `SafeUrl::parse`에 넘긴다 |
-| 이미지 | pt-0011 공통 이미지 처리로 `DataImageUri`를 받아 `Image`. `alt`는 이미지 설명 inline의 평문 |
+| 이미지 | `Image { src: None }`. 주소는 쓰지 않는다. `alt`는 이미지 설명 inline의 평문 |
 | soft/hard line break | `SoftBreak`, `HardBreak` |
 
 ### PAGE 블록 판별
@@ -172,7 +172,6 @@ pub(crate) enum PageBlockKind { Gantt }
 | `PAGE102` | 최상위의 알 수 없는 `page:*` fence | 버린다 | fence 전체 |
 | `PAGE104` | 목록 항목·인용구 안의 `page:*` fence | 버린다 | fence 전체 |
 | `PAGE105` | `SafeUrl::parse`가 거부한 링크 주소 | 링크를 풀고 내용 inline만 남긴다 | 링크 범위 |
-| `PAGE106` | 공통 이미지 처리 실패 (pt-0011이 원인별 메시지 정의) | 버린다 | 이미지 범위 |
 
 - 모든 진단은 `Severity::Error`이고 `source_name`과 `span`을 채운다. `block_kind`는 PAGE 블록 진단에 `"page:…"` 언어를 넣는다.
 
@@ -197,13 +196,13 @@ pub(crate) enum PageBlockKind { Gantt }
 - [ ] 블록 이벤트를 `MarkdownBlock` 트리로 조립한다: heading, 문단, 목록, 체크박스, 인용구, code, 표, 구분선
 - [ ] inline 이벤트를 `Inline`으로 조립한다: text 병합, code, 강조, 취소선, 링크, 이미지, 줄바꿈
 - [ ] 첫 최상위 H1을 `title`로 꺼낸다.
-- [ ] 이미지는 pt-0011 공통 이미지 처리를 호출해 `DataImageUri`를 받는다.
-- [ ] 구조화 테스트: 요소별 변환, 중첩 목록과 인용구, tight 목록, 표 정렬, 이메일 autolink, 메모리 resolver로 이미지 변환, H1 없음, 두 번째 H1, 인용구 안 H1
+- [ ] pt-0003 모델의 `Inline::Image.src`를 `Option<DataImageUri>`로 바꾸고, 파서는 모든 이미지를 `src: None`으로 만든다.
+- [ ] 구조화 테스트: 요소별 변환, 중첩 목록과 인용구, tight 목록, 표 정렬, 이메일 autolink, 이미지는 주소와 관계없이 `src: None`, H1 없음, 두 번째 H1, 인용구 안 H1
 
 ### PAGE 블록과 진단
 
 - [ ] `page:*` fence를 판별해 `RawPageBlock`을 만들고 `span`, `body_start`를 채운다.
-- [ ] `PAGE101`, `PAGE102`, `PAGE104`, `PAGE105`, `PAGE106`을 진단하고 오류 요소를 버리거나 내용만 남긴다.
+- [ ] `PAGE101`, `PAGE102`, `PAGE104`, `PAGE105`를 진단하고 오류 요소를 버리거나 내용만 남긴다.
 - [ ] PAGE 블록 테스트: 여러 `page:gantt`와 Markdown의 원문 순서, 들여쓴 fence의 `body_start`, 빈 body, 닫히지 않은 fence
 - [ ] 진단 테스트: 코드별 입력과 위치, 한 문서의 여러 오류 수집, PAGE 블록 없는 문서는 진단 없음
 
@@ -220,6 +219,8 @@ pub(crate) enum PageBlockKind { Gantt }
 
 ### 진행 기록
 
+- 이미지 미구현 처리 (2026-10-18): 이미지는 `data:image`만 받는 대신 모두 미구현으로 둔다. 파서는 `src: None` 이미지를 만들고 pt-0007이 미구현 문구가 든 빈 박스를 그린다. 진단은 내지 않으며 `PAGE106`은 쓰지 않는다.
+- 이미지 처리 범위 조정 (2026-10-18): 공통 이미지 처리(pt-0011)를 ep-0001에서 빼고 backlog로 옮겼다. pt-0004는 `data:image` URI만 받고 그 밖의 이미지 주소는 `PAGE106`으로 진단한다. 파서 입력에서 resolver를 뺐다.
 - Q5 결정 (2026-10-18): `page:` 접두어는 대소문자 구분 없이 PAGE 블록 후보로 보고, 정확히 `page:gantt`가 아니면 `PAGE102`로 진단한다. 결정 필요 항목을 모두 정리했다.
 - Q4 결정 (2026-10-18): 위험한 링크 주소는 `PAGE105`, 이미지 처리 실패는 `PAGE106`이다. `PAGE103`은 예전 "Gantt 둘 이상" 코드라 다시 쓰지 않는다. 이미지는 출처와 관계없이 공통 인터페이스로 처리하기로 하고 pt-0011로 분리했다. 파서가 이미지를 만나는 즉시 공통 처리를 호출하므로 Q2 결정(PAGE 블록만 위치 보존)은 그대로다.
 - Q3 결정 (2026-10-18): 진단 타입과 `has_errors`, `is_empty`는 pt-0004에서 공개 타입으로 구현하고, 진단 정렬과 100개 제한은 pt-0007에서 구현한다.
@@ -229,7 +230,7 @@ pub(crate) enum PageBlockKind { Gantt }
 
 ## 선행 작업
 
-- pt-0002, pt-0003, pt-0011
+- pt-0002, pt-0003
 
 ## 후속 작업
 

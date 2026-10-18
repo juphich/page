@@ -15,7 +15,7 @@ MVP는 일반 Markdown 본문과 0개 이상의 `page:gantt` fenced block을 처
 
 raw HTML은 단일 문서의 구조와 스크립트 안전성을 보장하기 위해 MVP에서 허용하지 않는다. raw HTML이 필요하면 후속 버전에서 별도의 신뢰 입력 옵션과 sanitization 정책을 정의한다.
 
-링크는 `http`, `https`, `mailto`, 문서 안의 fragment와 상대 경로를 허용한다. 각 제목은 제목 텍스트로 만든 `id`를 가지므로 `[일정](#일정)`처럼 제목으로 이동하는 링크를 쓸 수 있다. `javascript:`와 실행 가능한 `data:` 링크는 오류다. 이미지는 단일 파일 원칙에 따라 `data:image/*` URI만 허용하며 상대 파일과 원격 이미지는 asset embedding을 설계할 때까지 지원하지 않는다.
+링크는 `http`, `https`, `mailto`, 문서 안의 fragment와 상대 경로를 허용한다. 각 제목은 제목 텍스트로 만든 `id`를 가지므로 `[일정](#일정)`처럼 제목으로 이동하는 링크를 쓸 수 있다. `javascript:`와 실행 가능한 `data:` 링크는 오류다. 이미지는 아직 지원하지 않는다. 오류 없이 변환하되 이미지 자리에 `Image not supported yet` 문구와 alt를 담은 빈 박스를 표시한다.
 
 첫 번째 level-1 제목을 문서 제목으로 사용하고 원래 inline 표현을 유지해 문서 header에 한 번만 렌더링한다. HTML `<title>`에는 이를 plain text로 평탄화한 값을 사용한다. 이후 제목은 content 영역에서 원래 순서대로 렌더링한다. level-1 제목이 없으면 `PAGE Document`를 사용한다. `page:gantt`의 `title`은 문서 제목에 사용하지 않으며 항상 해당 Gantt component 안에 렌더링한다.
 

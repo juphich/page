@@ -116,7 +116,7 @@ pub(crate) enum Inline {
     Strong(Vec<Inline>),
     Strikethrough(Vec<Inline>),
     Link { href: SafeUrl, title: Option<String>, content: Vec<Inline> },
-    Image { src: DataImageUri, alt: String, title: Option<String> },
+    Image { src: Option<DataImageUri>, alt: String, title: Option<String> }, // None: 이미지 미구현 빈 박스
     SoftBreak,
     HardBreak,
 }
@@ -283,6 +283,7 @@ Gantt 블록마다 JSON data block 하나를 만든다. 내용은 정규화된 �
 
 ### 진행 기록
 
+- 이미지 미구현 반영 (2026-10-18): pt-0004 설계에서 이미지를 미구현으로 두기로 해 `Inline::Image.src`를 `Option<DataImageUri>`로 바꾼다. 코드 변경은 pt-0004 1단계에서 한다.
 - 5단계 마무리 (2026-10-18): 모델 타입의 trait 구현을 점검하고 다른 오류 타입과 맞춰 `ItemIdError`에 `Copy`를 추가했다. 완료 조건과 `plan.md`를 갱신하고 검증 결과를 기록했다. `version`은 형식 변경에 대비해 유지하기로 했다.
 - 4단계 Gantt 구조 (2026-10-18): `chart.rs`에 `Gantt`, `SchemaVersion`, `GanttItem`, `MilestoneItem`, `Milestone`, `Epic`, `GanttTask`, `EmptyItems`를 구현하고 `page.rs`에 `PageBlock::Gantt`, `DocumentBlock::Page`를 추가했다. 설계와 다른 점: `gantt/mod.rs`는 `document/mod.rs`처럼 선언과 재내보내기만 두고 구조 타입과 `SchemaVersion`을 `chart.rs`로 옮겼다. 전체 JSON 테스트에서 epic 안의 task에 `type`이 빠지는 문제가 드러나, `type` 태그를 enum 대신 `Milestone`, `Epic`, `GanttTask` 구조체에 두고 enum은 `untagged`로 바꿨다. `cargo fmt --check`, `cargo clippy`, `cargo test`(25개) 통과.
 - 3단계 Gantt 값 타입 (2026-10-15): `id.rs`(`ItemId`), `date.rs`(`CalendarDate`, `DateRange`), `status.rs`(`TaskStatus`), `mod.rs`(`SchemaVersion`)를 구현했다. 설계와 다른 점: `ItemIdError`는 `Empty`, `TooLong`, `InvalidStart`, `InvalidCharacter`로, `DateError`는 `InvalidFormat`, `NonexistentDate`로 나누고 0년을 거부한다. pt-0005 중복 ID 검사를 위해 `ItemId`, `CalendarDate`에 `Hash`를 둔다. `TaskStatus`의 JSON 문자열은 serde 이름 규칙 대신 `as_str`를 써서 상태 이름을 한 곳에서만 정의한다. `gantt` 하위 모듈은 비공개로 두고 `gantt/mod.rs`에서 다시 내보내며, 임시 `#[allow(unused_imports)]` 제거를 pt-0007에 기록했다. `cargo fmt --check`, `cargo clippy`, `cargo test`(22개) 통과.
